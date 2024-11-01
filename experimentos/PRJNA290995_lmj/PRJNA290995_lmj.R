@@ -31,7 +31,7 @@ if (!requireNamespace("biomaRt", quietly = TRUE)) {
 # Carregar o pacote ggrepel
 
 setwd("/Users/carlitos/Desktop/RNA-seq/")
-setwd("/Users/carlitos/Documents/")
+# setwd("/Users/carlitos/Documents/")
 
 library(ggrepel)
 library(biomaRt)
@@ -235,7 +235,7 @@ bwnet <- blockwiseModules(norm.counts,
 
 cor <- temp_cor
 
-save(bwnet, file = "PRJNA290995_lmj_bwnet.RData")
+# save(bwnet, file = "PRJNA290995_lmj_bwnet.RData")
 # load("/Users/carlitos/Desktop/resultados/PRJNA290995_lmj/bwnet.RData")
 
 # 5. Module Eigengenes ---------------------------------------------------------
@@ -496,7 +496,7 @@ green_genes <- module.gene.mapping %>%
 
 
 # Calcular o TOM (Topological Overlap Matrix)
-TOM <- TOMsimilarityFromExpr(norm.counts, power = soft_power, TOMType = "signed")
+# TOM <- TOMsimilarityFromExpr(norm.counts, power = soft_power, TOMType = "signed")
 
 # save(TOM, file = "TOM_signed.RData")
 load("TOM_signed.RData")
@@ -521,6 +521,7 @@ nodeData <- data.frame(Node = geneIDs,
                        GeneSymbol = geneSymbols,
                        GeneName = geneNames)
 
+
 # Remover quaisquer genes sem informações de símbolo ou nome, se necessário
 nodeData <- na.omit(nodeData)
 
@@ -529,21 +530,37 @@ write.table(nodeData, "CytoscapeInput-nodes1.txt", sep = "\t", row.names = FALSE
 
 
 # Contar o número de conexões com TOM > 0.09
-num_connections_above_threshold <- sum(TOM > 0.09)
+num_connections_above_threshold <- sum(TOM > 0.148)
 
-# Mostrar o resultado
 cat("Número de conexões com TOM > 0.09:", num_connections_above_threshold, "\n")
+
+
 
 
 # Carregar pacotes necessários
 library(org.Hs.eg.db)
 library(AnnotationDbi)
 
-# Suponha que 'valores_interesse' contenha IDs de genes
+# Suponha que 'valores_interesse' contenha os IDs de genes relevantes
 geneIDs <- valores_interesse
 
 # Obter os símbolos dos genes com base nos IDs
 geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
+geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
 
+# Criar o data frame com cores e símbolos
+geneData <- data.frame(
+  GeneID = geneIDs,
+  ModuleColor = bwnet$colors[geneIDs],  # Usando geneIDs em vez de valores_interesse
+  GeneSymbol = geneSymbols,
+  GeneName = geneNames
+)
+
+# Remover linhas com valores NA, se necessário
+geneData <- na.omit(geneData)
+
+# Visualizar o data frame resultante
+print(geneData)
+
+# Exportar para um arquivo
 write.table(geneData, "genes_com_modulos.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-# 
