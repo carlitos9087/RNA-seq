@@ -223,14 +223,14 @@ cor <- WGCNA::cor
 
 
 # memory estimate w.r.t blocksize
-bwnet <- blockwiseModules(norm.counts,
-                          maxBlockSize = 14000,
-                          TOMType = "signed",
-                          power = soft_power,
-                          mergeCutHeight = 0.25,
-                          numericLabels = FALSE,
-                          randomSeed = 1234,
-                          verbose = 3)
+# bwnet <- blockwiseModules(norm.counts,
+                          # maxBlockSize = 14000,
+                          # TOMType = "signed",
+                          # power = soft_power,
+                          # mergeCutHeight = 0.25,
+                          # numericLabels = FALSE,
+                          # randomSeed = 1234,
+                          # verbose = 3)
 
 
 cor <- temp_cor
@@ -348,6 +348,11 @@ module.gene.mapping %>%
   rownames()
 
 class(bwnet$colors)
+genes344 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 1)
+valores_interesse344 = genes344$Entrez_ID
+
+genes285 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 2)
+valores_interesse285 = genes285$Entrez_ID
 
 valores_interesse <- c("54915", "51441", "253943", "91746", "79068", "56339",
                        "57721", "54890", "64848", "221120", "8846", "84266",
@@ -359,8 +364,24 @@ valores_interesse <- c("54915", "51441", "253943", "91746", "79068", "56339",
                        "9734", "83933", "23411", "22933", "23410", "23409",
                        "23408", "51548", "51547")
 
+colors_geral = bwnet$colors
+
+df_table_geral <- as.data.frame(table(colors_geral), stringsAsFactors = FALSE)
+colnames(df_table_geral) <- c("Colors_geral", "Frequency")
+
+
+colors = bwnet$colors[valores_interesse]
 bwnet$colors[valores_interesse]
 table(bwnet$colors[valores_interesse])
+
+
+df_table <- as.data.frame(table(colors), stringsAsFactors = FALSE)
+colnames(df_table) <- c("Colors", "Frequency")
+
+df_colors <- data.frame(Valores = valores_interesse, Colors = colors)
+
+library(writexl)
+write_xlsx(list("colors geral conts" = df_table_geral, "Color Counts" = df_table, "Colors Info" = df_colors), path = "/Users/carlitos/Desktop/bwnet_colors.xlsx")
 
 
 
