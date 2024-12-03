@@ -28,6 +28,10 @@ if (!requireNamespace("biomaRt", quietly = TRUE)) {
 #   install.packages("ggrepel")
 # }
 
+if (!requireNamespace("openxlsx", quietly = TRUE)) {
+  install.packages("openxlsx")
+}
+
 # Carregar o pacote ggrepel
 
 setwd("/Users/carlitos/Desktop/RNA-seq/")
@@ -48,7 +52,7 @@ library(CorLevelPlot)
 library(gridExtra)
 library(stringr)
 library(readxl)
-
+library(openxlsx)
 
 tabular_dir  <- "experimentos/fastas/Leishmania/PRJNA290995 --------lmj/"
 tabular_files <- list.files(path = tabular_dir, pattern = "\\.tabular$", full.names = TRUE)
@@ -262,7 +266,6 @@ plotDendroAndColors(bwnet$dendrograms[[1]], cbind(bwnet$unmergedColors, bwnet$co
 
 
 
-
 # grey module = all genes that doesn't fall into other modules were assigned to the grey module
 
 
@@ -348,11 +351,14 @@ module.gene.mapping %>%
   rownames()
 
 class(bwnet$colors)
+
 genes344 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 1)
 valores_interesse344 = genes344$Entrez_ID
+valores_interesse344
 
 genes285 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 2)
 valores_interesse285 = genes285$Entrez_ID
+valores_interesse285
 
 valores_interesse <- c("54915", "51441", "253943", "91746", "79068", "56339",
                        "57721", "54890", "64848", "221120", "8846", "84266",
@@ -366,23 +372,108 @@ valores_interesse <- c("54915", "51441", "253943", "91746", "79068", "56339",
 
 colors_geral = bwnet$colors
 
+
 df_table_geral <- as.data.frame(table(colors_geral), stringsAsFactors = FALSE)
 colnames(df_table_geral) <- c("Colors_geral", "Frequency")
+df_table_geral
 
-
-colors = bwnet$colors[valores_interesse]
+colors_interesse = bwnet$colors[valores_interesse]
+colors_interesse
 bwnet$colors[valores_interesse]
 table(bwnet$colors[valores_interesse])
 
 
-df_table <- as.data.frame(table(colors), stringsAsFactors = FALSE)
+df_table <- as.data.frame(table(colors_interesse), stringsAsFactors = FALSE)
 colnames(df_table) <- c("Colors", "Frequency")
 
-df_colors <- data.frame(Valores = valores_interesse, Colors = colors)
+df_colors <- data.frame(genes = valores_interesse, Colors = colors_interesse)
+
+################################################################################
+colors_interesse344 = bwnet$colors[valores_interesse344]
+colors_interesse344
+bwnet$colors[valores_interesse344]
+table(bwnet$colors[valores_interesse344])
+
+
+df_table344 <- as.data.frame(table(colors_interesse344), stringsAsFactors = FALSE)
+colnames(df_table344) <- c("Colors", "Frequency")
+
+df_colors344 <- data.frame(genes = valores_interesse344, Colors = colors_interesse344)
+################################################################################
+
+colors_interesse285 = bwnet$colors[valores_interesse285]
+colors_interesse285
+bwnet$colors[valores_interesse285]
+table(bwnet$colors[valores_interesse285])
+
+
+df_table285 <- as.data.frame(table(colors_interesse285), stringsAsFactors = FALSE)
+colnames(df_table285) <- c("Colors", "Frequency")
+
+df_colors285 <- data.frame(genes = valores_interesse285, Colors = colors_interesse285)
+
+
+
 
 library(writexl)
 write_xlsx(list("colors geral conts" = df_table_geral, "Color Counts" = df_table, "Colors Info" = df_colors), path = "/Users/carlitos/Desktop/bwnet_colors.xlsx")
+#############################################################
+# Instale os pacotes, se necessário
+if (!requireNamespace("openxlsx", quietly = TRUE)) {
+  install.packages("openxlsx")
+}
 
+library(openxlsx)
+
+# Criação do workbook
+wb <- createWorkbook()
+
+# Adiciona uma aba para "colors geral conts"
+addWorksheet(wb, "colors geral conts")
+
+# Adiciona a tabela "df_table_geral" na aba "colors geral conts"
+writeData(wb, sheet = "colors geral conts", x = df_table_geral, startCol = 1, startRow = 1)
+
+# Criação do gráfico em R
+png("/Users/carlitos/Desktop/temp_plot.png", width = 800, height = 600) # Salva o gráfico como imagem temporária
+cores_graf = df_table_geral$Colors_geral
+barplot(
+  df_table_geral$Frequency,
+  names.arg = df_table_geral$Colors_geral,
+  las = 2, # Rotação dos rótulos
+  col = cores_graf,
+  main = "Frequency of Colors",
+  xlab = "Colors",
+  ylab = "Frequency"
+)
+dev.off()
+
+# Insere o gráfico como imagem na aba "colors geral conts"
+insertImage(
+  wb,
+  sheet = "colors geral conts",
+  file = "/Users/carlitos/Desktop/temp_plot.png",
+  width = 10, height = 6,
+  startCol = 5, startRow = 1
+)
+
+# Adiciona as outras tabelas em abas separadas
+writeData(wb, sheet = addWorksheet(wb, "Color Counts"), x = df_table, startCol = 1, startRow = 1)
+writeData(wb, sheet = addWorksheet(wb, "Colors Info"), x = df_colors, startCol = 1, startRow = 1)
+writeData(wb, sheet = addWorksheet(wb, "Colors Interesse 344"), x = df_table344, startCol = 1, startRow = 1)
+writeData(wb, sheet = addWorksheet(wb, "Colors Info 344"), x = df_colors344, startCol = 1, startRow = 1)
+writeData(wb, sheet = addWorksheet(wb, "Colors Interesse 285"), x = df_table285, startCol = 1, startRow = 1)
+writeData(wb, sheet = addWorksheet(wb, "Colors Info 285"), x = df_colors285, startCol = 1, startRow = 1)
+
+# Salva o arquivo Excel no local especificado
+saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors1.xlsx", overwrite = TRUE)
+
+# Remove o arquivo temporário
+file.remove("/Users/carlitos/Desktop/temp_plot.png")
+
+
+
+#############################################################
 
 
 # 6B. Intramodular analysis: Identifying driver genes ---------------
@@ -585,3 +676,23 @@ print(geneData)
 
 # Exportar para um arquivo
 write.table(geneData, "genes_com_modulos.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+
+
+# Dados fornecidos
+color_table <- c(black = 95, blue = 1153, brown = 770, green = 120, greenyellow = 20, 
+                 grey = 6345, magenta = 57, pink = 60, purple = 29, red = 100, 
+                 turquoise = 3023, yellow = 502)
+
+# Definir as cores correspondentes
+colors <- c("black", "blue", "brown", "green", "greenyellow", "grey", "magenta", 
+            "pink", "purple", "red", "turquoise", "yellow", "")
+
+# Criar o gráfico de barras
+barplot(color_table, 
+        main = "Distribuição de Cores", 
+        xlab = "Cores", 
+        ylab = "Frequência", 
+        col = colors, 
+        las = 2, 
+        cex.names = 0.8)
