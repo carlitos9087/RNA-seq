@@ -434,15 +434,19 @@ addWorksheet(wb, "colors geral conts")
 # Adiciona a tabela "df_table_geral" na aba "colors geral conts"
 writeData(wb, sheet = "colors geral conts", x = df_table_geral, startCol = 1, startRow = 1)
 
-# Criação do gráfico em R
-png("/Users/carlitos/Desktop/temp_plot.png", width = 800, height = 600) # Salva o gráfico como imagem temporária
-cores_graf = df_table_geral$Colors_geral
+##################
+# Gráfico para "colors geral conts"
+png("/Users/carlitos/Desktop/temp_plot1.png", width = 800, height = 600) # Salva o gráfico como imagem temporária
+par(mar = c(8, 4, 4, 2) + 0.5) 
+par(mgp = c(5.5, 1, 0))
+
+cores_graf1 = df_table_geral$Colors_geral
 barplot(
   df_table_geral$Frequency,
   names.arg = df_table_geral$Colors_geral,
   las = 2, # Rotação dos rótulos
-  col = cores_graf,
-  main = "Frequency of Colors",
+  col = cores_graf1,
+  main = "Frequency of Colors (Geral)",
   xlab = "Colors",
   ylab = "Frequency"
 )
@@ -452,13 +456,47 @@ dev.off()
 insertImage(
   wb,
   sheet = "colors geral conts",
-  file = "/Users/carlitos/Desktop/temp_plot.png",
+  file = "/Users/carlitos/Desktop/temp_plot1.png",
   width = 10, height = 6,
   startCol = 5, startRow = 1
 )
+##################
+
+# Adiciona uma aba para "Color Counts"
+addWorksheet(wb, "Color Counts")
+
+# Adiciona a tabela "df_table" na aba "Color Counts"
+writeData(wb, sheet = "Color Counts", x = df_table, startCol = 1, startRow = 1)
+
+##################
+# Gráfico para "Color Counts"
+png("/Users/carlitos/Desktop/temp_plot2.png", width = 800, height = 600) # Salva o gráfico como imagem temporária
+par(mar = c(8, 4, 4, 2) + 0.5)
+par(mgp = c(5.5, 1, 0))
+
+cores_graf2 = df_table$Colors
+barplot(
+  df_table$Frequency,
+  names.arg = df_table$Colors,
+  las = 2, # Rotação dos rótulos
+  col = cores_graf2,
+  main = "Frequency of Colors (Subset)",
+  xlab = "Colors",
+  ylab = "Frequency"
+)
+dev.off()
+
+# Insere o gráfico como imagem na aba "Color Counts"
+insertImage(
+  wb,
+  sheet = "Color Counts",
+  file = "/Users/carlitos/Desktop/temp_plot2.png",
+  width = 10, height = 6,
+  startCol = 5, startRow = 1
+)
+##################
 
 # Adiciona as outras tabelas em abas separadas
-writeData(wb, sheet = addWorksheet(wb, "Color Counts"), x = df_table, startCol = 1, startRow = 1)
 writeData(wb, sheet = addWorksheet(wb, "Colors Info"), x = df_colors, startCol = 1, startRow = 1)
 writeData(wb, sheet = addWorksheet(wb, "Colors Interesse 344"), x = df_table344, startCol = 1, startRow = 1)
 writeData(wb, sheet = addWorksheet(wb, "Colors Info 344"), x = df_colors344, startCol = 1, startRow = 1)
@@ -468,9 +506,9 @@ writeData(wb, sheet = addWorksheet(wb, "Colors Info 285"), x = df_colors285, sta
 # Salva o arquivo Excel no local especificado
 saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors1.xlsx", overwrite = TRUE)
 
-# Remove o arquivo temporário
-file.remove("/Users/carlitos/Desktop/temp_plot.png")
-
+# Remove os arquivos temporários
+file.remove("/Users/carlitos/Desktop/temp_plot1.png")
+file.remove("/Users/carlitos/Desktop/temp_plot2.png")
 
 
 #############################################################
