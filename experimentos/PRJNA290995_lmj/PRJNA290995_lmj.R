@@ -36,7 +36,7 @@ if (!requireNamespace("openxlsx", quietly = TRUE)) {
 
 setwd("/Users/carlitos/Desktop/RNA-seq/")
 # setwd("/Users/carlitos/Documents/")
-
+library(dplyr)
 library(ggrepel)
 library(biomaRt)
 library(dplyr)
@@ -53,7 +53,12 @@ library(gridExtra)
 library(stringr)
 library(readxl)
 library(openxlsx)
+library(org.Hs.eg.db) 
 
+
+################################################################################
+# Montando o conjunto de dados
+################################################################################
 tabular_dir  <- "experimentos/fastas/Leishmania/PRJNA290995 --------lmj/"
 tabular_files <- list.files(path = tabular_dir, pattern = "\\.tabular$", full.names = TRUE)
 
@@ -72,11 +77,11 @@ rownames(combined_df) = combined_df$Geneid
 combined_df = combined_df[,-1]
 
 data = combined_df
-############################################################################################
 
-# 2. QC - outlier detection ------------------------------------------------
+################################################################################
+# 2. QC - outlier detection 
 # detect outlier genes
-
+################################################################################
 gsg <- goodSamplesGenes(t(data))
 summary(gsg)
 gsg$allOK
@@ -110,19 +115,16 @@ ggplot(pca.dat, aes(PC1, PC2)) +
        y = paste0('PC2: ', pca.var.percent[2], ' %'))
 
 
-### NOTE: If there are batch effects observed, correct for them before moving ahead
 
 
 #exclude outlier samples
 samples.to.be.excluded <- c("Lama_Infected_72h_R3_SRR2163299")
 data.subset <- data[,!(colnames(data) %in% samples.to.be.excluded)]
 
-# for ( i in colnames(data.subset)){
-#   print(i)
-# }
 
+################################################################################
 # 3. Normalization ----------------------------------------------------------------------
-# create a deseq2 dataset
+################################################################################
 
 phenoData  <-  read_excel("experimentos/PRJNA290995_lmj/Phenodata lmj.xlsx", col_names = TRUE)
 lista  <- phenoData$id
@@ -184,9 +186,10 @@ norm.counts <- assay(dds_norm) %>%
 
 
 
-###########################################
-# 4. Network Construction  ---------------------------------------------------
+################################################################################
+# 4. Network Construction 
 # Choose a set of soft-thresholding powers
+################################################################################
 power <- c(c(1:10), seq(from = 12, to = 50, by = 2))
 
 # Call the network topology analysis function
@@ -240,9 +243,13 @@ cor <- WGCNA::cor
 cor <- temp_cor
 
 # save(bwnet, file = "PRJNA290995_lmj_bwnet.RData")
-# load("/Users/carlitos/Desktop/resultados/PRJNA290995_lmj/bwnet.RData")
+load("/Users/carlitos/Desktop/resultados/PRJNA290995_lmj/bwnet.RData")
 
+################################################################################
 # 5. Module Eigengenes ---------------------------------------------------------
+################################################################################
+
+
 module_eigengenes <- bwnet$MEs
 
 
@@ -266,15 +273,11 @@ plotDendroAndColors(bwnet$dendrograms[[1]], cbind(bwnet$unmergedColors, bwnet$co
 
 
 
-# grey module = all genes that doesn't fall into other modules were assigned to the grey module
 
-
-
-
-
+################################################################################
 # 6A. Relate modules to traits --------------------------------------------------
 # module trait associations
-
+################################################################################
 
 # create traits file - binarize categorical variables
 traits <- colData %>% 
@@ -345,12 +348,12 @@ CorLevelPlot(heatmap.data,
 
 # write.csv(as.data.frame(heatmap.data), file = "/Users/carlitos/Desktop/PRJNA290995_lama_heatmap.data.csv", row.names = TRUE)
 
-module.gene.mapping <- as.data.frame(bwnet$colors)
-module.gene.mapping %>% 
-  filter(`bwnet$colors` == 'brown') %>% 
-  rownames()
-
-class(bwnet$colors)
+# module.gene.mapping <- as.data.frame(bwnet$colors)
+# module.gene.mapping %>% 
+#   filter(`bwnet$colors` == 'brown') %>% 
+#   rownames()
+# 
+# class(bwnet$colors)
 
 genes344 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 1)
 valores_interesse344 = genes344$Entrez_ID
@@ -414,101 +417,156 @@ df_colors285 <- data.frame(genes = valores_interesse285, Colors = colors_interes
 
 
 
+df_colors
+df_colors285
+df_colors344
 
-library(writexl)
-write_xlsx(list("colors geral conts" = df_table_geral, "Color Counts" = df_table, "Colors Info" = df_colors), path = "/Users/carlitos/Desktop/bwnet_colors.xlsx")
+df_colors$genes <- as.character(df_colors$genes)
+
+df_colors <- df_colors %>%
+  mutate(GeneSymbol = mapIds( org.Hs.eg.db, keys = genes, column = "SYMBOL",
+                            keytype = "ENTREZID", multiVals = "first" ))
+
+df_colors <- dplyr::select(df_colors, GeneSymbol, genes, Colors)
+
+
+df_colors285$genes <- as.character(df_colors285$genes)
+df_colors285 <- df_colors285 %>%
+  mutate(GeneSymbol = mapIds( org.Hs.eg.db, keys = genes, column = "SYMBOL",
+                              keytype = "ENTREZID", multiVals = "first" ))
+df_colors285 <- dplyr::select(df_colors285, GeneSymbol, genes, Colors)
+
+
+df_colors344$genes <- as.character(df_colors344$genes)
+df_colors344 <- df_colors344 %>%
+  mutate(GeneSymbol = mapIds( org.Hs.eg.db, keys = genes, column = "SYMBOL",
+                              keytype = "ENTREZID", multiVals = "first" ))
+df_colors344 <- dplyr::select(df_colors344, GeneSymbol, genes, Colors)
+
+
 #############################################################
-# Instale os pacotes, se necessário
-if (!requireNamespace("openxlsx", quietly = TRUE)) {
-  install.packages("openxlsx")
-}
-
 library(openxlsx)
 
-# Criação do workbook
+# Função para gerar gráficos e salvá-los como imagens
+generate_plot <- function(data, colors_col, freq_col, output_file, main_title, x_label, y_label) {
+  png(output_file, width = 800, height = 600) # Salva o gráfico como imagem
+  par(mar = c(8, 4, 4, 2) + 0.5)
+  par(mgp = c(5.5, 1, 0))
+  barplot(
+    data[[freq_col]],
+    names.arg = data[[colors_col]],
+    las = 2,
+    col = data[[colors_col]],
+    main = main_title,
+    xlab = x_label,
+    ylab = y_label
+  )
+  dev.off()
+}
+
+# Função para inserir gráfico no Excel
+insert_plot_to_excel <- function(wb, sheet_name, image_file, start_col, start_row, width, height) {
+  insertImage(
+    wb,
+    sheet = sheet_name,
+    file = image_file,
+    width = width, height = height,
+    startCol = start_col, startRow = start_row
+  )
+}
+
+# Dados e configurações para os gráficos e abas
+plots_info <- list(
+  list(
+    data = df_table_geral,
+    colors_col = "Colors_geral",
+    freq_col = "Frequency",
+    sheet_name = "colors geral conts",
+    output_file = "/Users/carlitos/Desktop/temp_plot1.png",
+    main_title = "Frequency of Colors (Geral)",
+    x_label = "Colors",
+    y_label = "Frequency"
+  ),
+  list(
+    data = df_table,
+    colors_col = "Colors",
+    freq_col = "Frequency",
+    sheet_name = "Color interesse Counts",
+    output_file = "/Users/carlitos/Desktop/temp_plot2.png",
+    main_title = "Frequency of Colors (Subset)",
+    x_label = "Colors",
+    y_label = "Frequency"
+  ),
+  list(
+    data = df_table344,
+    colors_col = "Colors",
+    freq_col = "Frequency",
+    sheet_name = "Colors Interesse 344",
+    output_file = "/Users/carlitos/Desktop/temp_plot3.png",
+    main_title = "Frequency of Colors (344)",
+    x_label = "Colors",
+    y_label = "Frequency"
+  ),
+  list(
+    data = df_table285,
+    colors_col = "Colors",
+    freq_col = "Frequency",
+    sheet_name = "Colors Interesse 285",
+    output_file = "/Users/carlitos/Desktop/temp_plot4.png",
+    main_title = "Frequency of Colors (285)",
+    x_label = "Colors",
+    y_label = "Frequency"
+  )
+)
+
+# Criação do workbook e adição das abas
 wb <- createWorkbook()
-
-# Adiciona uma aba para "colors geral conts"
 addWorksheet(wb, "colors geral conts")
+addWorksheet(wb, "Color interesse Counts")
+addWorksheet(wb, "Colors Info Interesse")
+addWorksheet(wb, "Colors Interesse 344")
+addWorksheet(wb, "Colors Info 344")
+addWorksheet(wb, "Colors Interesse 285")
+addWorksheet(wb, "Colors Info 285")
 
-# Adiciona a tabela "df_table_geral" na aba "colors geral conts"
+# Escreve os dados nas abas
 writeData(wb, sheet = "colors geral conts", x = df_table_geral, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Color interesse Counts", x = df_table, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Info Interesse", x = df_colors, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Interesse 344", x = df_table344, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Info 344", x = df_colors344, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Interesse 285", x = df_table285, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Info 285", x = df_colors285, startCol = 1, startRow = 1)
 
-##################
-# Gráfico para "colors geral conts"
-png("/Users/carlitos/Desktop/temp_plot1.png", width = 800, height = 600) # Salva o gráfico como imagem temporária
-par(mar = c(8, 4, 4, 2) + 0.5) 
-par(mgp = c(5.5, 1, 0))
-
-cores_graf1 = df_table_geral$Colors_geral
-barplot(
-  df_table_geral$Frequency,
-  names.arg = df_table_geral$Colors_geral,
-  las = 2, # Rotação dos rótulos
-  col = cores_graf1,
-  main = "Frequency of Colors (Geral)",
-  xlab = "Colors",
-  ylab = "Frequency"
-)
-dev.off()
-
-# Insere o gráfico como imagem na aba "colors geral conts"
-insertImage(
-  wb,
-  sheet = "colors geral conts",
-  file = "/Users/carlitos/Desktop/temp_plot1.png",
-  width = 10, height = 6,
-  startCol = 5, startRow = 1
-)
-##################
-
-# Adiciona uma aba para "Color Counts"
-addWorksheet(wb, "Color Counts")
-
-# Adiciona a tabela "df_table" na aba "Color Counts"
-writeData(wb, sheet = "Color Counts", x = df_table, startCol = 1, startRow = 1)
-
-##################
-# Gráfico para "Color Counts"
-png("/Users/carlitos/Desktop/temp_plot2.png", width = 800, height = 600) # Salva o gráfico como imagem temporária
-par(mar = c(8, 4, 4, 2) + 0.5)
-par(mgp = c(5.5, 1, 0))
-
-cores_graf2 = df_table$Colors
-barplot(
-  df_table$Frequency,
-  names.arg = df_table$Colors,
-  las = 2, # Rotação dos rótulos
-  col = cores_graf2,
-  main = "Frequency of Colors (Subset)",
-  xlab = "Colors",
-  ylab = "Frequency"
-)
-dev.off()
-
-# Insere o gráfico como imagem na aba "Color Counts"
-insertImage(
-  wb,
-  sheet = "Color Counts",
-  file = "/Users/carlitos/Desktop/temp_plot2.png",
-  width = 10, height = 6,
-  startCol = 5, startRow = 1
-)
-##################
-
-# Adiciona as outras tabelas em abas separadas
-writeData(wb, sheet = addWorksheet(wb, "Colors Info"), x = df_colors, startCol = 1, startRow = 1)
-writeData(wb, sheet = addWorksheet(wb, "Colors Interesse 344"), x = df_table344, startCol = 1, startRow = 1)
-writeData(wb, sheet = addWorksheet(wb, "Colors Info 344"), x = df_colors344, startCol = 1, startRow = 1)
-writeData(wb, sheet = addWorksheet(wb, "Colors Interesse 285"), x = df_table285, startCol = 1, startRow = 1)
-writeData(wb, sheet = addWorksheet(wb, "Colors Info 285"), x = df_colors285, startCol = 1, startRow = 1)
+# Geração dos gráficos e inserção no Excel
+for (plot_info in plots_info) {
+  generate_plot(
+    data = plot_info$data,
+    colors_col = plot_info$colors_col,
+    freq_col = plot_info$freq_col,
+    output_file = plot_info$output_file,
+    main_title = plot_info$main_title,
+    x_label = plot_info$x_label,
+    y_label = plot_info$y_label
+  )
+  insert_plot_to_excel(
+    wb = wb,
+    sheet_name = plot_info$sheet_name,
+    image_file = plot_info$output_file,
+    start_col = 5,
+    start_row = 1,
+    width = 8,
+    height = 6
+  )
+}
 
 # Salva o arquivo Excel no local especificado
-saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors1.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_PRJNA290995.xlsx", overwrite = TRUE)
 
 # Remove os arquivos temporários
-file.remove("/Users/carlitos/Desktop/temp_plot1.png")
-file.remove("/Users/carlitos/Desktop/temp_plot2.png")
+for (plot_info in plots_info) {
+  file.remove(plot_info$output_file)
+}
 
 
 #############################################################
