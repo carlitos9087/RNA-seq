@@ -579,32 +579,32 @@ for (plot_info in plots_info) {
 # The module membership/intramodular connectivity is calculated as the correlation of the eigengene and the gene expression profile. 
 # This quantifies the similarity of all genes on the array to every module.
 
-module.membership.measure <- cor(module_eigengenes, norm.counts, use = 'p')
-module.membership.measure.pvals <- corPvalueStudent(module.membership.measure, nSamples)
-
-
-module.membership.measure.pvals[1:12,1:12]
-
-
-# Calculate the gene significance and associated p-values
-
-gene.signf.corr <- cor(norm.counts, severity.out$data.Lama_Infected_4h.vs.all, use = 'p')
-gene.signf.corr.pvals <- corPvalueStudent(gene.signf.corr, nSamples)
-
-
-gene.signf.corr.pvals %>% 
-  as.data.frame() %>% 
-  arrange(V1) %>% 
-  head(25)
-
-
-# Using the gene significance you can identify genes that have a high significance for trait of interest 
-# Using the module membership measures you can identify genes with high module membership in interesting modules.
-
-# 7. analisis enrich
-green_genes <- module.gene.mapping %>% 
-  filter(`bwnet$colors` == 'brown') %>% 
-  rownames()
+# module.membership.measure <- cor(module_eigengenes, norm.counts, use = 'p')
+# module.membership.measure.pvals <- corPvalueStudent(module.membership.measure, nSamples)
+# 
+# 
+# module.membership.measure.pvals[1:12,1:12]
+# 
+# 
+# # Calculate the gene significance and associated p-values
+# 
+# gene.signf.corr <- cor(norm.counts, severity.out$data.Lama_Infected_4h.vs.all, use = 'p')
+# gene.signf.corr.pvals <- corPvalueStudent(gene.signf.corr, nSamples)
+# 
+# 
+# gene.signf.corr.pvals %>% 
+#   as.data.frame() %>% 
+#   arrange(V1) %>% 
+#   head(25)
+# 
+# 
+# # Using the gene significance you can identify genes that have a high significance for trait of interest 
+# # Using the module membership measures you can identify genes with high module membership in interesting modules.
+# 
+# # 7. analisis enrich
+# green_genes <- module.gene.mapping %>% 
+#   filter(`bwnet$colors` == 'brown') %>% 
+#   rownames()
 
 
 
@@ -734,61 +734,100 @@ nodeData <- data.frame(Node = geneIDs,
 nodeData <- na.omit(nodeData)
 
 # Exportar para um arquivo que será usado no Cytoscape
-write.table(nodeData, "CytoscapeInput-nodes1.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
+write.table(nodeData, "CytoscapeInput-nodes-PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+head(nodeData)
 
 # Contar o número de conexões com TOM > 0.09
 num_connections_above_threshold <- sum(TOM > 0.148)
 
-cat("Número de conexões com TOM > 0.09:", num_connections_above_threshold, "\n")
+cat("Número de conexões com TOM > 0.148:", num_connections_above_threshold, "\n")
 
 
 
 
-# Carregar pacotes necessários
-library(org.Hs.eg.db)
-library(AnnotationDbi)
 
-# Suponha que 'valores_interesse' contenha os IDs de genes relevantes
-geneIDs <- valores_interesse
 
-# Obter os símbolos dos genes com base nos IDs
-geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
-geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
 
-# Criar o data frame com cores e símbolos
-geneData <- data.frame(
-  GeneID = geneIDs,
-  ModuleColor = bwnet$colors[geneIDs],  # Usando geneIDs em vez de valores_interesse
-  GeneSymbol = geneSymbols,
-  GeneName = geneNames
+# Definir o limiar para conexões relevantes
+threshold <- 0.148
+
+# Encontrar pares de genes com TOM acima do limiar
+TOM_indices <- which(TOM > threshold, arr.ind = TRUE)
+
+
+
+
+
+# Supondo que `TOM` já está carregado e `moduleColors` e `expression` estão definidos
+threshold <- 0.148  # Defina o corte para conexões relevantes
+
+# Obter os nomes dos genes
+genes <- colnames(norm.counts)
+
+# Selecionar os genes e criar a matriz topológica completa
+modTOM <- TOM
+dimnames(modTOM) <- list(genes, genes)
+
+# Identificar as conexões que atendem ao limiar
+TOM_indices <- which(modTOM > threshold, arr.ind = TRUE)
+
+# Garantir que estamos lidando apenas com conexões superiores à diagonal principal
+TOM_indices <- TOM_indices[TOM_indices[, 1] < TOM_indices[, 2], ]
+
+# Criar a tabela de arestas para Cytoscape
+edgeData <- data.frame(
+  fromNode = genes[TOM_indices[, 1]],
+  toNode = genes[TOM_indices[, 2]],
+  weight = modTOM[TOM_indices],
+  direction = "undirected"
 )
 
-# Remover linhas com valores NA, se necessário
-geneData <- na.omit(geneData)
+# Exportar o arquivo de arestas
+write.table(edgeData, "CytoscapeEdgeFile.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
-# Visualizar o data frame resultante
-print(geneData)
+# Criar a tabela de nodos para Cytoscape
+nodeData <- data.frame(
+  Node = genes,
+  ModuleColor = bwnet$colors
+)
 
-# Exportar para um arquivo
-write.table(geneData, "genes_com_modulos.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+# Exportar o arquivo de nodos
+write.table(nodeData, "CytoscapeNodeFile.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+# Mensagem de conclusão
+cat("Arquivos 'CytoscapeEdgeFile.txt' e 'CytoscapeNodeFile.txt' foram gerados com sucesso.\n")
+
+
+# 
+# 
+# # Carregar pacotes necessários
+# library(org.Hs.eg.db)
+# library(AnnotationDbi)
+# 
+# # Suponha que 'valores_interesse' contenha os IDs de genes relevantes
+# geneIDs <- valores_interesse
+# 
+# # Obter os símbolos dos genes com base nos IDs
+# geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
+# geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
+# 
+# # Criar o data frame com cores e símbolos
+# geneData <- data.frame(
+#   GeneID = geneIDs,
+#   ModuleColor = bwnet$colors[geneIDs],  # Usando geneIDs em vez de valores_interesse
+#   GeneSymbol = geneSymbols,
+#   GeneName = geneNames
+# )
+# 
+# # Remover linhas com valores NA, se necessário
+# geneData <- na.omit(geneData)
+# 
+# # Visualizar o data frame resultante
+# print(geneData)
+# 
+# # Exportar para um arquivo
+# write.table(geneData, "genes_com_modulos_PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 
 
-# Dados fornecidos
-color_table <- c(black = 95, blue = 1153, brown = 770, green = 120, greenyellow = 20, 
-                 grey = 6345, magenta = 57, pink = 60, purple = 29, red = 100, 
-                 turquoise = 3023, yellow = 502)
 
-# Definir as cores correspondentes
-colors <- c("black", "blue", "brown", "green", "greenyellow", "grey", "magenta", 
-            "pink", "purple", "red", "turquoise", "yellow", "")
-
-# Criar o gráfico de barras
-barplot(color_table, 
-        main = "Distribuição de Cores", 
-        xlab = "Cores", 
-        ylab = "Frequência", 
-        col = colors, 
-        las = 2, 
-        cex.names = 0.8)
