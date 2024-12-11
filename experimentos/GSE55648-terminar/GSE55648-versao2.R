@@ -16,11 +16,10 @@ BiocManager::install(c("Mus.musculus", "Homo.sapiens"))
 '''
 
 
-library(knitr)
-library(limma)
-library(reshape2)
-library(RColorBrewer)
-library(ggplot2)
+setwd("/Users/carlitos/Desktop/RNA-seq/")
+# setwd("/Users/carlitos/Documents/")
+library(dplyr)
+library(ggrepel)
 library(biomaRt)
 library(dplyr)
 library(tidyr)
@@ -35,9 +34,12 @@ library(CorLevelPlot)
 library(gridExtra)
 library(stringr)
 library(readxl)
+library(openxlsx)
+library(org.Hs.eg.db) 
 
 
-tabular_dir  <- "/Users/carlitos/Desktop/experimentos/exps fasta/fastas - Copia/Aspergilus/GSE55648(aspergilus)/"
+
+tabular_dir  <- "/Users/carlitos/Desktop/RNA-seq/experimentos/fastas/Aspergilus/GSE55648(homo sapiens)"
 tabular_files <- list.files(path = tabular_dir, pattern = "\\.tabular$", full.names = TRUE)
 
 
@@ -65,7 +67,7 @@ colnames(data) <- c("separably_were_united_for_RNA_isolation_SRR1184521","separa
 
 colnames(data)
 # dados da amostra
-phenoData  <-  read_excel("/Users/carlitos/Desktop/GSE55648.xlsx", col_names = TRUE)
+phenoData  <-  read_excel("/Users/carlitos/Desktop/RNA-seq/experimentos/GSE55648/GSE55648.xlsx", col_names = TRUE)
 lista  <- phenoData$id
 phenoData <- phenoData[,-1]
 rownames(phenoData) <- lista
