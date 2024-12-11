@@ -33,6 +33,12 @@ if (!requireNamespace("openxlsx", quietly = TRUE)) {
 }
 
 # Carregar o pacote ggrepel
+if (!requireNamespace("rentrez", quietly = TRUE)) {
+  install.packages("rentrez")
+}
+
+
+
 
 setwd("/Users/carlitos/Desktop/RNA-seq/")
 # setwd("/Users/carlitos/Documents/")
@@ -342,7 +348,7 @@ colnames(heatmap.data)
 colnames(traits)
 colnames(heatmap.data)
 CorLevelPlot(heatmap.data,
-             x = names(heatmap.data)[21:27],
+             x = names(heatmap.data)[24:31],
              y = names(heatmap.data)[1:20],rotLabX = 50,
              col = c("cyan", "white", "grey", "purple"))
 
@@ -701,101 +707,68 @@ for (plot_info in plots_info) {
 # ego_df <- as.data.frame(ego)
 # write.csv(ego_df, file = "/Users/carlitos/Desktop/enrichment_results.csv", row.names = FALSE)
 
-
-
-# Calcular o TOM (Topological Overlap Matrix)
-# TOM <- TOMsimilarityFromExpr(norm.counts, power = soft_power, TOMType = "signed")
-
-# save(TOM, file = "TOM_signed.RData")
-load("TOM_signed.RData")
-
 # Carregar as bibliotecas necessárias
+library(EnsDb.Hsapiens.v86)
 library(Homo.sapiens)
 library(AnnotationDbi)
 library(org.Hs.eg.db)
 
-# Suponha que 'geneIDs' seja uma lista de IDs de genes a partir do seu conjunto de dados
+# Suponha que 'geneIDs' seja uma lista de IDs de genes a partir do conjunto de dados
 geneIDs <- colnames(norm.counts)
 
 # Obter os símbolos dos genes e nomes completos
 geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
 geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
 
-
-
 # Criar uma tabela de nodos com cores dos módulos e anotações adicionais
-nodeData <- data.frame(Node = geneIDs,
-                       ModuleColor = bwnet$colors,
-                       GeneSymbol = geneSymbols,
-                       GeneName = geneNames)
+nodeData <- data.frame(
+  Node = geneIDs,
+  ModuleColor = bwnet$colors,
+  GeneSymbol = geneSymbols,
+  GeneName = geneNames
+)
 
-
-# Remover quaisquer genes sem informações de símbolo ou nome, se necessário
+# Remover genes sem informações de símbolo ou nome, se necessário
 nodeData <- na.omit(nodeData)
 
-# Exportar para um arquivo que será usado no Cytoscape
-write.table(nodeData, "CytoscapeInput-nodes-PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-head(nodeData)
+# Exportar tabela de nodos para uso no Cytoscape
+write.table(nodeData, "./experimentos/PRJNA290995_lmj/CytoscapeNodeFile-PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
-# Contar o número de conexões com TOM > 0.09
-num_connections_above_threshold <- sum(TOM > 0.148)
-
-cat("Número de conexões com TOM > 0.148:", num_connections_above_threshold, "\n")
-
-
-
-
-
-
-
-# Definir o limiar para conexões relevantes
+# Definir limiar para TOM
 threshold <- 0.148
-
-# Encontrar pares de genes com TOM acima do limiar
-TOM_indices <- which(TOM > threshold, arr.ind = TRUE)
-
-
-
-
-
-# Supondo que `TOM` já está carregado e `moduleColors` e `expression` estão definidos
-threshold <- 0.148  # Defina o corte para conexões relevantes
 
 # Obter os nomes dos genes
 genes <- colnames(norm.counts)
 
-# Selecionar os genes e criar a matriz topológica completa
-modTOM <- TOM
-dimnames(modTOM) <- list(genes, genes)
+# Configurar matriz topológica com nomes dos genes
+dimnames(TOM) <- list(genes, genes)
 
-# Identificar as conexões que atendem ao limiar
-TOM_indices <- which(modTOM > threshold, arr.ind = TRUE)
+# Identificar conexões que atendem ao limiar
+TOM_indices <- which(TOM > threshold, arr.ind = TRUE)
+TOM_indices <- TOM_indices[TOM_indices[, 1] < TOM_indices[, 2], ]  # Apenas conexões superiores à diagonal principal
 
-# Garantir que estamos lidando apenas com conexões superiores à diagonal principal
-TOM_indices <- TOM_indices[TOM_indices[, 1] < TOM_indices[, 2], ]
-
-# Criar a tabela de arestas para Cytoscape
+# Criar tabela de arestas para o Cytoscape
 edgeData <- data.frame(
   fromNode = genes[TOM_indices[, 1]],
   toNode = genes[TOM_indices[, 2]],
-  weight = modTOM[TOM_indices],
+  weight = TOM[TOM_indices],
   direction = "undirected"
 )
 
-# Exportar o arquivo de arestas
-write.table(edgeData, "CytoscapeEdgeFile.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+# Adicionar os símbolos dos genes correspondentes
+edgeData$fromAltName <- nodeData$GeneSymbol[match(edgeData$fromNode, nodeData$Node)]
+edgeData$toAltName <- nodeData$GeneSymbol[match(edgeData$toNode, nodeData$Node)]
 
-# Criar a tabela de nodos para Cytoscape
-nodeData <- data.frame(
-  Node = genes,
-  ModuleColor = bwnet$colors
-)
-
-# Exportar o arquivo de nodos
-write.table(nodeData, "CytoscapeNodeFile.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+# Exportar tabela de arestas para o Cytoscape
+write.table(edgeData, "./experimentos/PRJNA290995_lmj/CytoscapeEdgeFile-PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 # Mensagem de conclusão
-cat("Arquivos 'CytoscapeEdgeFile.txt' e 'CytoscapeNodeFile.txt' foram gerados com sucesso.\n")
+cat("Arquivos 'CytoscapeEdgeFile-PRJNA290995.txt' e 'CytoscapeNodeFile-PRJNA290995.txt' foram gerados com sucesso.\n")
+
+
+
+
+
 
 
 # 
