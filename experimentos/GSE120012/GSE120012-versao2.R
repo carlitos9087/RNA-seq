@@ -376,6 +376,20 @@ heatmap.data <- heatmap.data %>%
 heatmap.data
 colnames(heatmap.data)
 
+
+# get number of genes for each module
+color_table=table(bwnet$colors)
+color_table
+color_table
+barplot(color_table, 
+        main = "Distribuição de Cores", 
+        xlab = "Cores", 
+        ylab = "Frequência", 
+        col = names(color_table), 
+        las = 2, 
+        cex.names = 0.8)
+
+
 colnames(traits)
 colnames(heatmap.data)
 CorLevelPlot(heatmap.data,
@@ -385,7 +399,109 @@ CorLevelPlot(heatmap.data,
 
 # write.csv(as.data.frame(heatmap.data), file = "/Users/carlitos/Desktop/heatmap.data.csv", row.names = TRUE)
 
+# Função para mapear IDs Entrez humanos para ortólogos de Mus musculus
 
+# map_human_to_mouse <- function(entrez_ids, human_dataset = "hsapiens_gene_ensembl", mouse_dataset = "mmusculus_gene_ensembl") {
+#   library(biomaRt)
+#   
+#   # Conectar ao BioMart humano
+#   # ensembl_human <- useEnsembl(biomart = "genes", dataset = human_dataset)
+#   
+#   ensembl_human <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", host = "https://www.ensembl.org")
+#   # ensembl_mouse <- useEnsembl(biomart = "genes", dataset = "mmusculus_gene_ensembl", host = "https://www.ensembl.org")
+#   
+#   # Obter o mapeamento humano de entrezgene_id para ensembl_gene_id
+#   human_mapping <- getBM(
+#     attributes = c("entrezgene_id", "ensembl_gene_id"),
+#     filters = "entrezgene_id",
+#     values = entrez_ids,
+#     mart = ensembl_human
+#   )
+#   
+#   # Obter ortólogos de Mus musculus
+#   orthologs <- getBM(
+#     attributes = c("ensembl_gene_id", "mmusculus_homolog_associated_gene_name", 
+#                    "mmusculus_homolog_ensembl_gene"),
+#     filters = "ensembl_gene_id",
+#     values = human_mapping$ensembl_gene_id,
+#     mart = ensembl_human
+#   )
+#   
+#   # Combinar resultados humanos e ortólogos
+#   combined_result <- merge(human_mapping, orthologs, by = "ensembl_gene_id")
+#   
+#   # Conectar ao BioMart de Mus musculus
+#   ensembl_mouse <- useEnsembl(biomart = "genes", dataset = mouse_dataset)
+#   
+#   # Obter mapeamento de IDs Ensembl para IDs Entrez em Mus musculus
+#   mouse_mapping <- getBM(
+#     attributes = c("ensembl_gene_id", "entrezgene_id"),
+#     filters = "ensembl_gene_id",
+#     values = combined_result$mmusculus_homolog_ensembl_gene,
+#     mart = ensembl_mouse
+#   )
+#   
+#   # Combinar com o resultado final
+#   final_result <- merge(combined_result, mouse_mapping, 
+#                         by.x = "mmusculus_homolog_ensembl_gene", 
+#                         by.y = "ensembl_gene_id", 
+#                         all.x = TRUE)
+#   
+#   # Renomear a nova coluna
+#   colnames(final_result)[ncol(final_result)] <- "mmusculus_homolog_entrezgene"
+#   
+#   return(final_result)
+# }
+
+# Função para mapear IDs Entrez humanos para ortólogos de Mus musculus
+map_human_to_mouse <- function(entrez_ids, human_dataset = "hsapiens_gene_ensembl", mouse_dataset = "mmusculus_gene_ensembl") {
+  library(biomaRt)
+  
+  # Conectar ao BioMart humano
+  ensembl_human <- useEnsembl(biomart = "genes", dataset = human_dataset)
+  
+  # Obter o mapeamento humano de entrezgene_id para ensembl_gene_id
+  human_mapping <- getBM(
+    attributes = c("entrezgene_id", "ensembl_gene_id"),
+    filters = "entrezgene_id",
+    values = entrez_ids,
+    mart = ensembl_human
+  )
+  
+  # Obter ortólogos de Mus musculus
+  orthologs <- getBM(
+    attributes = c("ensembl_gene_id", "mmusculus_homolog_associated_gene_name", 
+                   "mmusculus_homolog_ensembl_gene"),
+    filters = "ensembl_gene_id",
+    values = human_mapping$ensembl_gene_id,
+    mart = ensembl_human
+  )
+  
+  # Combinar resultados humanos e ortólogos
+  combined_result <- merge(human_mapping, orthologs, by = "ensembl_gene_id")
+  
+  # Conectar ao BioMart de Mus musculus
+  ensembl_mouse <- useEnsembl(biomart = "genes", dataset = mouse_dataset)
+  
+  # Obter mapeamento de IDs Ensembl para IDs Entrez em Mus musculus
+  mouse_mapping <- getBM(
+    attributes = c("ensembl_gene_id", "entrezgene_id"),
+    filters = "ensembl_gene_id",
+    values = combined_result$mmusculus_homolog_ensembl_gene,
+    mart = ensembl_mouse
+  )
+  
+  # Combinar com o resultado final
+  final_result <- merge(combined_result, mouse_mapping, 
+                        by.x = "mmusculus_homolog_ensembl_gene", 
+                        by.y = "ensembl_gene_id", 
+                        all.x = TRUE)
+  
+  # Renomear a nova coluna
+  colnames(final_result)[ncol(final_result)] <- "mmusculus_homolog_entrezgene"
+  
+  return(final_result)
+}
 
 
 
@@ -401,9 +517,46 @@ genes344 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 1)
 valores_interesse344 = genes344$Entrez_ID
 valores_interesse344
 
+######
+listEnsembl()
+listEnsemblArchives()
+######
+
+result344 <- map_human_to_mouse(valores_interesse344)
+print(result344)
+
+
+# Converter as colunas para o tipo character
+result344$entrezgene_id.x <- as.character(result344$entrezgene_id.x)
+result344$mmusculus_homolog_entrezgene <- as.character(result344$mmusculus_homolog_entrezgene)
+
+# Verificar os tipos das colunas
+str(result344)
+
+
+
+
+
+
+valores_interesse_convertidos344 = result344$mmusculus_homolog_entrezgene
+
+valores_interesse_convertidos344  
+
+
 genes285 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 2)
 valores_interesse285 = genes285$Entrez_ID
-valores_interesse285
+result285 <- map_human_to_mouse(valores_interesse285)
+# Converter as colunas para o tipo character
+result285$entrezgene_id.x <- as.character(result285$entrezgene_id.x)
+result285$mmusculus_homolog_entrezgene <- as.character(result285$mmusculus_homolog_entrezgene)
+
+# Verificar os tipos das colunas
+str(result285)
+
+
+print(result285)
+valores_interesse_convertidos285 = result285$mmusculus_homolog_entrezgene
+valores_interesse_convertidos285
 
 valores_interesse <- c('228994','213541','229096','231386','26383','56335','210529','268420','240255','69113','211064','66400','52463',
                        '66926','101867','52575','68789','328162','28114','13434','98956','21681','22608','107435','14534','18519','81601','244349',
@@ -419,44 +572,92 @@ colnames(df_table_geral) <- c("Colors_geral", "Frequency")
 df_table_geral
 
 colors_interesse = bwnet$colors[valores_interesse]
-colors_interesse
-bwnet$colors[valores_interesse]
-table(bwnet$colors[valores_interesse])
+
+
+
+table(bwnet$colors[valores_interesse_convertidos344])
+
+
+colors_interesse = bwnet$colors[valores_interesse_convertidos344]
+
 
 
 df_table <- as.data.frame(table(colors_interesse), stringsAsFactors = FALSE)
+
 colnames(df_table) <- c("Colors", "Frequency")
-length(colors_interesse)
-colors_interesse
-length(valores_interesse)
-valores_interesse
-df_colors <- data.frame(genes = valores_interesse, Colors = colors_interesse, row.names = NULL)
+
+
+
+df_colors <- data.frame(genes = valores_interesse, Colors = bwnet$colors[valores_interesse], row.names = NULL)
+
+
+# Realizar o merge baseado na coluna 'genes' de df_colors344 e 'mmusculus_homolog_entrezgene' de result344
+df_colors <- merge(
+  df_colors,
+  result344[, c("mmusculus_homolog_entrezgene", "mmusculus_homolog_associated_gene_name")],
+  by.x = "genes",
+  by.y = "mmusculus_homolog_entrezgene",
+  all.x = TRUE
+)
+
+# Verificar o resultado
+head(df_colors)
+
 
 
 ################################################################################
-colors_interesse344 = bwnet$colors[valores_interesse344]
+colors_interesse344 = bwnet$colors[valores_interesse_convertidos344]
 colors_interesse344
-bwnet$colors[valores_interesse344]
-table(bwnet$colors[valores_interesse344])
+bwnet$colors[valores_interesse_convertidos344]
+table(bwnet$colors[valores_interesse_convertidos344])
 
 
 df_table344 <- as.data.frame(table(colors_interesse344), stringsAsFactors = FALSE)
 colnames(df_table344) <- c("Colors", "Frequency")
 
-df_colors344 <- data.frame(genes = valores_interesse344, Colors = colors_interesse344)
+df_colors344 <- data.frame(genes = valores_interesse_convertidos344, Colors = colors_interesse344)
+
+# Certifique-se de que as colunas de IDs estejam no mesmo formato (character)
+df_colors344$genes <- as.character(df_colors344$genes)
+result344$mmusculus_homolog_entrezgene <- as.character(result344$mmusculus_homolog_entrezgene)
+
+# Realizar o merge baseado na coluna 'genes' de df_colors344 e 'mmusculus_homolog_entrezgene' de result344
+df_colors344 <- merge(
+  df_colors344,
+  result344[, c("mmusculus_homolog_entrezgene", "mmusculus_homolog_associated_gene_name")],
+  by.x = "genes",
+  by.y = "mmusculus_homolog_entrezgene",
+  all.x = TRUE
+)
+
+# Verificar o resultado
+head(df_colors344)
+
+
 ################################################################################
 
-colors_interesse285 = bwnet$colors[valores_interesse285]
+colors_interesse285 = bwnet$colors[valores_interesse_convertidos285]
 colors_interesse285
-bwnet$colors[valores_interesse285]
-table(bwnet$colors[valores_interesse285])
+bwnet$colors[valores_interesse_convertidos285]
+table(bwnet$colors[valores_interesse_convertidos285])
 
 
 df_table285 <- as.data.frame(table(colors_interesse285), stringsAsFactors = FALSE)
 colnames(df_table285) <- c("Colors", "Frequency")
 
-df_colors285 <- data.frame(genes = valores_interesse285, Colors = colors_interesse285)
+df_colors285 <- data.frame(genes = valores_interesse_convertidos285, Colors = colors_interesse285)
 
+# Realizar o merge baseado na coluna 'genes' de df_colors344 e 'mmusculus_homolog_entrezgene' de result344
+df_colors285 <- merge(
+  df_colors285,
+  result285[, c("mmusculus_homolog_entrezgene", "mmusculus_homolog_associated_gene_name")],
+  by.x = "genes",
+  by.y = "mmusculus_homolog_entrezgene",
+  all.x = TRUE
+)
+
+# Verificar o resultado
+head(df_colors285)
 
 
 df_colors
@@ -603,7 +804,7 @@ for (plot_info in plots_info) {
 }
 
 # Salva o arquivo Excel no local especificado
-saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_PRJNA290995.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_GSE120012.xlsx", overwrite = TRUE)
 
 # Remove os arquivos temporários
 for (plot_info in plots_info) {
@@ -744,34 +945,85 @@ for (plot_info in plots_info) {
 # write.csv(ego_df, file = "/Users/carlitos/Desktop/enrichment_results.csv", row.names = FALSE)
 
 # Carregar as bibliotecas necessárias
-library(EnsDb.Hsapiens.v86)
-library(Homo.sapiens)
-library(AnnotationDbi)
-library(org.Hs.eg.db)
+# library(EnsDb.Hsapiens.v86)
+# library(Homo.sapiens)
+# library(AnnotationDbi)
+# library(org.Hs.eg.db)
+# 
+# # Suponha que 'geneIDs' seja uma lista de IDs de genes a partir do conjunto de dados
+# geneIDs <- colnames(norm.counts)
+# 
+# # Obter os símbolos dos genes e nomes completos
+# geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
+# geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
 
-# Suponha que 'geneIDs' seja uma lista de IDs de genes a partir do conjunto de dados
+
+library(org.Mm.eg.db)  # Banco de dados de anotações para Mus musculus
+
+# Suponha que 'geneIDs' seja uma lista de IDs de genes de camundongo
 geneIDs <- colnames(norm.counts)
 
-# Obter os símbolos dos genes e nomes completos
-geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
-geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
+# Obter os símbolos dos genes e nomes completos para Mus musculus
+geneSymbols <- mapIds(org.Mm.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
+geneNames <- mapIds(org.Mm.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
 
-# Criar uma tabela de nodos com cores dos módulos e anotações adicionais
+# Visualizar os resultados
+head(geneSymbols)
+head(geneNames)
+
+
+
+length(geneIDs)       # Total de IDs de genes
+length(bwnet$colors)  # Cores dos módulos
+length(geneSymbols)   # Símbolos dos genes
+length(geneNames)     # Nomes dos genes
+
+# Ajustar geneSymbols e geneNames para incluir apenas os IDs presentes em geneIDs
+geneSymbols <- geneSymbols[geneIDs]
+geneNames <- geneNames[geneIDs]
+# Certificar que as cores correspondem aos genes
+moduleColors <- bwnet$colors[geneIDs]
+
+
+# Criar o data.frame
 nodeData <- data.frame(
   Node = geneIDs,
-  ModuleColor = bwnet$colors,
+  ModuleColor = moduleColors,
   GeneSymbol = geneSymbols,
-  GeneName = geneNames
+  GeneName = geneNames,
+  stringsAsFactors = FALSE
 )
+
+
+
+# # Criar uma tabela de nodos com cores dos módulos e anotações adicionais
+# nodeData <- data.frame(
+#   Node = geneIDs,
+#   ModuleColor = bwnet$colors,
+#   GeneSymbol = geneSymbols,
+#   GeneName = geneNames
+# )
 
 # Remover genes sem informações de símbolo ou nome, se necessário
 nodeData <- na.omit(nodeData)
 
 # Exportar tabela de nodos para uso no Cytoscape
-write.table(nodeData, "./experimentos/PRJNA290995_lmj/CytoscapeNodeFile-PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+write.table(nodeData, "./experimentos/GSE120012/CytoscapeNodeFile-GSE120012.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+
+
+# TOM = TOMsimilarityFromExpr(norm.counts, power = 10)
+# save(TOM, file = "/Users/carlitos/Desktop/resultados/GSE120012/TOM_power10.RData")
+load(file = "/Users/carlitos/Desktop/resultados/GSE120012/TOM.RData")
+
+
+
 
 # Definir limiar para TOM
-threshold <- 0.148
+threshold <- 0.3
+
+sum(TOM > threshold)
+
 
 # Obter os nomes dos genes
 genes <- colnames(norm.counts)
@@ -796,7 +1048,7 @@ edgeData$fromAltName <- nodeData$GeneSymbol[match(edgeData$fromNode, nodeData$No
 edgeData$toAltName <- nodeData$GeneSymbol[match(edgeData$toNode, nodeData$Node)]
 
 # Exportar tabela de arestas para o Cytoscape
-write.table(edgeData, "./experimentos/PRJNA290995_lmj/CytoscapeEdgeFile-PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+write.table(edgeData, "./experimentos/GSE120012/CytoscapeEdgeFile-GSE120012.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 # Mensagem de conclusão
 cat("Arquivos 'CytoscapeEdgeFile-PRJNA290995.txt' e 'CytoscapeNodeFile-PRJNA290995.txt' foram gerados com sucesso.\n")
@@ -836,6 +1088,11 @@ cat("Arquivos 'CytoscapeEdgeFile-PRJNA290995.txt' e 'CytoscapeNodeFile-PRJNA2909
 # 
 # # Exportar para um arquivo
 # write.table(geneData, "genes_com_modulos_PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+
+
+
+
 
 
 
