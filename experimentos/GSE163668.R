@@ -37,6 +37,7 @@ library(stringr)
 library(readxl)
 
 
+
 tabular_dir  <- "/Users/carlitos/Desktop/experimentos/exps fasta/fastas/SARS-CoV-2/GSE163668(homo sapiens)/"
 tabular_files <- list.files(path = tabular_dir, pattern = "\\.tabular$", full.names = TRUE)
 
@@ -59,7 +60,7 @@ colnames(data)
 
 
 # dados da amostra
-phenoData  <-  read_excel("/Users/carlitos/Desktop/GSE163668 sarscov.xlsx", col_names = TRUE)
+phenoData  <-  read_excel("/Users/carlitos/Desktop/resultados/GSE163668/GSE163668 sarscov.xlsx", col_names = TRUE)
 lista  <- phenoData$SampleName
 phenoData <- phenoData[,-1]
 rownames(phenoData) <- lista
@@ -282,21 +283,21 @@ cor <- WGCNA::cor
 print("das")
 
 # memory estimate w.r.t blocksize
-bwnet <- blockwiseModules(norm.counts,
-                          maxBlockSize = 14100,
-                          TOMType = "signed",
-                          power = soft_power,
-                          mergeCutHeight = 0.25,
-                          numericLabels = FALSE,
-                          randomSeed = 1234,
-                          verbose = 3)
+# bwnet <- blockwiseModules(norm.counts,
+                          # maxBlockSize = 14100,
+                          # TOMType = "signed",
+                          # power = soft_power,
+                          # mergeCutHeight = 0.25,
+                          # numericLabels = FALSE,
+                          # randomSeed = 1234,
+                          # verbose = 3)
 
 
 
 cor <- temp_cor
 print("blabla")
-save(bwnet, file = "/Users/carlitos/Desktop/resultados/GSE163668/GSE163668_bwnet.RData")
-load("/Users/carlitos/Desktop/resultados/GSE148796 HIV/GSE148796_bwnet.RData")
+# save(bwnet, file = "/Users/carlitos/Desktop/resultados/GSE163668/GSE163668_bwnet.RData")
+load("/Users/carlitos/Desktop/resultados/GSE163668/GSE163668_bwnet.RData")
 
 # 5. Module Eigengenes ---------------------------------------------------------
 # 5. Module Eigengenes ---------------------------------------------------------
@@ -350,7 +351,7 @@ plotDendroAndColors(bwnet$dendrograms[[1]], cbind(bwnet$unmergedColors, bwnet$co
 # 6A. Relate modules to traits --------------------------------------------------
 # module trait associations
 
-
+colData
 # create traits file - binarize categorical variables
 traits <- colData %>% 
   mutate(disease_state_bin = ifelse(grepl("severe|mild_moderate", Treatment), 1, 0))
@@ -369,19 +370,28 @@ severity.out <- binarizeCategoricalColumns(colData$severity,
 traits <- cbind(traits, severity.out)
 rownames(traits) <- traits$SampleName
 traits <- traits %>% select(-1,-2,-3)
-
+traits <-traits[4:6]
 # Define numbers of genes and samples
 nSamples <- nrow(norm.counts)
 nGenes <- ncol(norm.counts)
-
+module_eigengenes
 module.trait.corr <- cor(module_eigengenes, traits, use = 'p')
 module.trait.corr.pvals <- corPvalueStudent(module.trait.corr, nSamples)
 module.trait.corr.pvals
 
+extract_id <- function(x) {
+  sub(".*_(SRR[0-9]+)$", "\\1", x)
+}
+
+
+
+# nrow(module_eigengenes)
+nrow(traits)
 
 # visualize module-trait association as a heatmap
-nrow(module_eigengenes)
-nrow(traits)
+rownames(module_eigengenes)
+rownames(traits)
+
 
 heatmap.data <- merge(module_eigengenes, traits, by = 'row.names')
 
@@ -415,6 +425,7 @@ CorLevelPlot(heatmap.data,
              x = names(heatmap.data)[50:51],
              y = names(heatmap.data)[1:49],rotLabX = 0,
              col = c("blue1", "skyblue", "white", "pink", "red"))
+
 
 # write.csv(as.data.frame(heatmap.data), file = "/Users/carlitos/Desktop/heatmap.data.csv", row.names = TRUE)
 
@@ -1151,5 +1162,288 @@ gene_info$color_rgb <- col2hex(gene_info$module)
 g <- export_network_to_graphml(adj_matrix, filename='~/network.graphml',
                                threshold=0.4, nodeAttrDataFrame=gene_info)
 
+###########################################################
 
+
+genes344 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 1)
+valores_interesse344 = genes344$Entrez_ID
+valores_interesse344
+
+genes285 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 2)
+valores_interesse285 = genes285$Entrez_ID
+valores_interesse285
+
+valores_interesse <- c("54915", "51441", "253943", "91746", "79068", "56339",
+                       "57721", "54890", "64848", "221120", "8846", "84266",
+                       "80312", "51605", "23378", "55006", "115708", "54888",
+                       "1787", "55226", "10189", "4904", "8520", "2648",
+                       "8850", "10524", "7994", "23522", "11143", "84148",
+                       "9329", "1387", "79969", "2033", "3065", "3066",
+                       "8841", "9759", "10014", "10013", "51564", "55869",
+                       "9734", "83933", "23411", "22933", "23410", "23409",
+                       "23408", "51548", "51547")
+
+colors_geral = bwnet$colors
+
+
+df_table_geral <- as.data.frame(table(colors_geral), stringsAsFactors = FALSE)
+colnames(df_table_geral) <- c("Colors_geral", "Frequency")
+df_table_geral
+
+colors_interesse = bwnet$colors[valores_interesse]
+colors_interesse
+bwnet$colors[valores_interesse]
+table(bwnet$colors[valores_interesse])
+
+
+df_table <- as.data.frame(table(colors_interesse), stringsAsFactors = FALSE)
+colnames(df_table) <- c("Colors", "Frequency")
+
+df_colors <- data.frame(genes = valores_interesse, Colors = colors_interesse)
+
+################################################################################
+colors_interesse344 = bwnet$colors[valores_interesse344]
+colors_interesse344
+bwnet$colors[valores_interesse344]
+table(bwnet$colors[valores_interesse344])
+
+
+df_table344 <- as.data.frame(table(colors_interesse344), stringsAsFactors = FALSE)
+colnames(df_table344) <- c("Colors", "Frequency")
+
+df_colors344 <- data.frame(genes = valores_interesse344, Colors = colors_interesse344)
+################################################################################
+
+colors_interesse285 = bwnet$colors[valores_interesse285]
+colors_interesse285
+bwnet$colors[valores_interesse285]
+table(bwnet$colors[valores_interesse285])
+
+
+df_table285 <- as.data.frame(table(colors_interesse285), stringsAsFactors = FALSE)
+colnames(df_table285) <- c("Colors", "Frequency")
+
+df_colors285 <- data.frame(genes = valores_interesse285, Colors = colors_interesse285)
+
+
+
+df_colors
+df_colors285
+df_colors344
+
+df_colors$genes <- as.character(df_colors$genes)
+
+df_colors <- df_colors %>%
+  mutate(GeneSymbol = mapIds( org.Hs.eg.db, keys = genes, column = "SYMBOL",
+                              keytype = "ENTREZID", multiVals = "first" ))
+
+df_colors <- dplyr::select(df_colors, GeneSymbol, genes, Colors)
+
+
+df_colors285$genes <- as.character(df_colors285$genes)
+df_colors285 <- df_colors285 %>%
+  mutate(GeneSymbol = mapIds( org.Hs.eg.db, keys = genes, column = "SYMBOL",
+                              keytype = "ENTREZID", multiVals = "first" ))
+df_colors285 <- dplyr::select(df_colors285, GeneSymbol, genes, Colors)
+
+
+df_colors344$genes <- as.character(df_colors344$genes)
+df_colors344 <- df_colors344 %>%
+  mutate(GeneSymbol = mapIds( org.Hs.eg.db, keys = genes, column = "SYMBOL",
+                              keytype = "ENTREZID", multiVals = "first" ))
+df_colors344 <- dplyr::select(df_colors344, GeneSymbol, genes, Colors)
+
+
+#############################################################
+library(openxlsx)
+
+# Função para gerar gráficos e salvá-los como imagens
+generate_plot <- function(data, colors_col, freq_col, output_file, main_title, x_label, y_label) {
+  png(output_file, width = 800, height = 600) # Salva o gráfico como imagem
+  par(mar = c(8, 4, 4, 2) + 0.5)
+  par(mgp = c(5.5, 1, 0))
+  barplot(
+    data[[freq_col]],
+    names.arg = data[[colors_col]],
+    las = 2,
+    col = data[[colors_col]],
+    main = main_title,
+    xlab = x_label,
+    ylab = y_label
+  )
+  dev.off()
+}
+
+# Função para inserir gráfico no Excel
+insert_plot_to_excel <- function(wb, sheet_name, image_file, start_col, start_row, width, height) {
+  insertImage(
+    wb,
+    sheet = sheet_name,
+    file = image_file,
+    width = width, height = height,
+    startCol = start_col, startRow = start_row
+  )
+}
+
+# Dados e configurações para os gráficos e abas
+plots_info <- list(
+  list(
+    data = df_table_geral,
+    colors_col = "Colors_geral",
+    freq_col = "Frequency",
+    sheet_name = "colors geral conts",
+    output_file = "/Users/carlitos/Desktop/temp_plot1.png",
+    main_title = "Frequency of Colors (Geral)",
+    x_label = "Colors",
+    y_label = "Frequency"
+  ),
+  list(
+    data = df_table,
+    colors_col = "Colors",
+    freq_col = "Frequency",
+    sheet_name = "Color interesse Counts",
+    output_file = "/Users/carlitos/Desktop/temp_plot2.png",
+    main_title = "Frequency of Colors (Subset)",
+    x_label = "Colors",
+    y_label = "Frequency"
+  ),
+  list(
+    data = df_table344,
+    colors_col = "Colors",
+    freq_col = "Frequency",
+    sheet_name = "Colors Interesse 344",
+    output_file = "/Users/carlitos/Desktop/temp_plot3.png",
+    main_title = "Frequency of Colors (344)",
+    x_label = "Colors",
+    y_label = "Frequency"
+  ),
+  list(
+    data = df_table285,
+    colors_col = "Colors",
+    freq_col = "Frequency",
+    sheet_name = "Colors Interesse 285",
+    output_file = "/Users/carlitos/Desktop/temp_plot4.png",
+    main_title = "Frequency of Colors (285)",
+    x_label = "Colors",
+    y_label = "Frequency"
+  )
+)
+
+# Criação do workbook e adição das abas
+wb <- createWorkbook()
+addWorksheet(wb, "colors geral conts")
+addWorksheet(wb, "Color interesse Counts")
+addWorksheet(wb, "Colors Info Interesse")
+addWorksheet(wb, "Colors Interesse 344")
+addWorksheet(wb, "Colors Info 344")
+addWorksheet(wb, "Colors Interesse 285")
+addWorksheet(wb, "Colors Info 285")
+
+# Escreve os dados nas abas
+writeData(wb, sheet = "colors geral conts", x = df_table_geral, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Color interesse Counts", x = df_table, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Info Interesse", x = df_colors, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Interesse 344", x = df_table344, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Info 344", x = df_colors344, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Interesse 285", x = df_table285, startCol = 1, startRow = 1)
+writeData(wb, sheet = "Colors Info 285", x = df_colors285, startCol = 1, startRow = 1)
+
+# Geração dos gráficos e inserção no Excel
+for (plot_info in plots_info) {
+  generate_plot(
+    data = plot_info$data,
+    colors_col = plot_info$colors_col,
+    freq_col = plot_info$freq_col,
+    output_file = plot_info$output_file,
+    main_title = plot_info$main_title,
+    x_label = plot_info$x_label,
+    y_label = plot_info$y_label
+  )
+  insert_plot_to_excel(
+    wb = wb,
+    sheet_name = plot_info$sheet_name,
+    image_file = plot_info$output_file,
+    start_col = 5,
+    start_row = 1,
+    width = 8,
+    height = 6
+  )
+}
+
+# Salva o arquivo Excel no local especificado
+saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_GSE163668.xlsx", overwrite = TRUE)
+
+# Remove os arquivos temporários
+for (plot_info in plots_info) {
+  file.remove(plot_info$output_file)
+}
+
+
+# Carregar as bibliotecas necessárias
+library(EnsDb.Hsapiens.v86)
+library(Homo.sapiens)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+
+# Suponha que 'geneIDs' seja uma lista de IDs de genes a partir do conjunto de dados
+geneIDs <- colnames(norm.counts)
+
+# Obter os símbolos dos genes e nomes completos
+geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
+geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
+
+# Criar uma tabela de nodos com cores dos módulos e anotações adicionais
+nodeData <- data.frame(
+  Node = geneIDs,
+  ModuleColor = bwnet$colors,
+  GeneSymbol = geneSymbols,
+  GeneName = geneNames
+)
+
+# Remover genes sem informações de símbolo ou nome, se necessário
+nodeData <- na.omit(nodeData)
+
+# Exportar tabela de nodos para uso no Cytoscape
+write.table(nodeData, "./experimentos/GSE163668/CytoscapeNodeFile-GSE163668.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+
+
+
+# TOM = TOMsimilarityFromExpr(norm.counts, power = 20)
+# save(TOM, file = "/Users/carlitos/Desktop/resultados/GSE163668/TOM_power20.RData")
+load(file = "/Users/carlitos/Desktop/resultados/GSE163668/TOM_power20.RData")
+
+
+# Definir limiar para TOM
+threshold <- 0.2
+
+sum(TOM > threshold)
+
+# Obter os nomes dos genes
+genes <- colnames(norm.counts)
+
+# Configurar matriz topológica com nomes dos genes
+dimnames(TOM) <- list(genes, genes)
+
+# Identificar conexões que atendem ao limiar
+TOM_indices <- which(TOM > threshold, arr.ind = TRUE)
+TOM_indices <- TOM_indices[TOM_indices[, 1] < TOM_indices[, 2], ]  # Apenas conexões superiores à diagonal principal
+
+# Criar tabela de arestas para o Cytoscape
+edgeData <- data.frame(
+  fromNode = genes[TOM_indices[, 1]],
+  toNode = genes[TOM_indices[, 2]],
+  weight = TOM[TOM_indices],
+  direction = "undirected"
+)
+
+# Adicionar os símbolos dos genes correspondentes
+edgeData$fromAltName <- nodeData$GeneSymbol[match(edgeData$fromNode, nodeData$Node)]
+edgeData$toAltName <- nodeData$GeneSymbol[match(edgeData$toNode, nodeData$Node)]
+
+# Exportar tawnla de arestas para o Cytoscape
+write.table(edgeData, "./experimentos/GSE163668/CytoscapeEdgeFile-GSE163668.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+# Mensagem de conclusão
+cat("Arquivos 'CytoscapeEdgeFile-PRJNA290995.txt' e 'CytoscapeNodeFile-PRJNA290995.txt' foram gerados com sucesso.\n")
 

@@ -23,21 +23,9 @@ if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
 BiocManager::install("apeglm")
-# Instalar o pacote ggrepel se necessário
-if (!requireNamespace("ggrepel", quietly = TRUE)) {
-  install.packages("ggrepel")
-}
-# Instalar e carregar o pacote org.Mm.eg.db se necessário
-if (!requireNamespace("org.Mm.eg.db", quietly = TRUE)) {
-  install.packages("BiocManager")
-  BiocManager::install("org.Mm.eg.db")
-}
-
-# Carregar o pacote ggrepel
 
 
-library(org.Mm.eg.db)
-library(ggrepel)
+
 library(biomaRt)
 library(dplyr)
 library(tidyr)
@@ -52,10 +40,9 @@ library(CorLevelPlot)
 library(gridExtra)
 library(stringr)
 library(readxl)
-library(dplyr) 
 
 
-tabular_dir  <- "/Users/carlitos/Desktop/experimentos/exps fasta/fastas/Leishmania/PRJNA601732 - lodo//"
+tabular_dir  <- "/Users/carlitos/Desktop/experimentos/exps fasta/fastas/Leishmania/PRJNA290995 --------lama/"
 tabular_files <- list.files(path = tabular_dir, pattern = "\\.tabular$", full.names = TRUE)
 
 
@@ -114,10 +101,10 @@ ggplot(pca.dat, aes(PC1, PC2)) +
 ### NOTE: If there are batch effects observed, correct for them before moving ahead
 
 
-#exclude outlier samples
+# exclude outlier samples
 samples.to.be.excluded <- c("Lama_Infected_72h_R3_SRR2163299")
 data.subset <- data[,!(colnames(data) %in% samples.to.be.excluded)]
-colnames(data.subset)
+
 # for ( i in colnames(data.subset)){
 #   print(i)
 # }
@@ -125,7 +112,7 @@ colnames(data.subset)
 # 3. Normalization ----------------------------------------------------------------------
 # create a deseq2 dataset
 
-phenoData  <-  read_excel("/Users/carlitos/Desktop/resultados/aaaaaaaaaaaaaaaaaaaaaaaaaaa - lodo.xlsx", col_names = TRUE)
+phenoData  <-  read_excel("/Users/carlitos/Desktop/resultados/aaaaaaaaaaaaaaaaaaaaaaaaaaa - lama.xlsx", col_names = TRUE)
 lista  <- phenoData$id
 phenoData <- phenoData[,-1]
 rownames(phenoData) <- lista
@@ -147,17 +134,17 @@ names(colData) <- gsub('\\s', '_', names(colData))
 all(rownames(colData) %in% colnames(data.subset))
 all(rownames(colData) == colnames(data.subset))
 
-cont = 1
-for (i in rownames(colData)){
-  # print(rownames(colData)[cont])
-  a = colnames(data.subset)[cont]
-  b = rownames(colData)[cont]
-  print(a == b)
-  print(a)
-  print(b)
-  # print(cont)
-  cont = cont + 1
-}
+# cont = 1
+# for (i in rownames(colData)){
+#   # print(rownames(colData)[cont])
+#   a = colnames(data.subset)[cont]
+#   b = rownames(colData)[cont]
+#   print(a == b)
+#   print(a)
+#   print(b)
+#   # print(cont)
+#   cont = cont + 1
+# }
 
 (rownames(colData))[2] == (colnames(data.subset))[2]
 
@@ -171,7 +158,7 @@ dds <- DESeqDataSetFromMatrix(countData = data.subset,
 ## remove all genes with counts < 15 in more than 75% of samples (31*0.75=23.25)
 ## suggested by WGCNA on RNAseq FAQ
 
-dds75 <- dds[rowSums(counts(dds) >= 15) >= 15,]
+dds75 <- dds[rowSums(counts(dds) >= 15) >= 17,]
 nrow(dds75) # 13284 genes
 
 
@@ -222,12 +209,12 @@ grid.arrange(a1, a2, nrow = 2)
 # convert matrix to numeric
 norm.counts[] <- sapply(norm.counts, as.numeric)
 
-soft_power <- 12
+soft_power <- 28
 temp_cor <- cor
 cor <- WGCNA::cor
 
 
-# memory estimate w.r.t blocksize
+# # memory estimate w.r.t blocksize
 bwnet <- blockwiseModules(norm.counts,
                           maxBlockSize = 14000,
                           TOMType = "signed",
@@ -237,21 +224,12 @@ bwnet <- blockwiseModules(norm.counts,
                           randomSeed = 1234,
                           verbose = 3)
 
-#######################################
-# Obter a data e hora atual
-current_time <- Sys.time()
 
-# Formatar a data e hora
-formatted_time <- format(current_time, "%Y-%m-%d %H:%M:%S")
 
-# Imprimir a data e hora formatada
-print(formatted_time)
-###########################################
 cor <- temp_cor
 
-# save(bwnet, fi
-le = "/Users/carlitos/Desktop/resultados/PRJNA601732 lodo/bwnet_PRJNA601732.RData")
-load("/Users/carlitos/Desktop/bwnet.RData")
+# save(bwnet, file = "/Users/carlitos/Desktop/resultados/PRJNA290995_lama/bwnet.RData")
+load("/Users/carlitos/Desktop/resultados/PRJNA290995_lama/bwnet.RData")
 
 # 5. Module Eigengenes ---------------------------------------------------------
 module_eigengenes <- bwnet$MEs
@@ -290,7 +268,7 @@ plotDendroAndColors(bwnet$dendrograms[[1]], cbind(bwnet$unmergedColors, bwnet$co
 
 # create traits file - binarize categorical variables
 traits <- colData %>% 
-  mutate(disease_state_bin = ifelse(grepl('Ldonovani', Treatment), 1, 0)) #%>% select(2)
+  mutate(disease_state_bin = ifelse(grepl('_Infected_', Treatment), 1, 0)) #%>% select(2)
 
 
 # print(unique(traits))
@@ -298,7 +276,8 @@ traits <- colData %>%
 unique(colData$Treatment)
 
 colData$severity <- factor(colData$Treatment, levels = c(
-  "Infected_Mouse_Ldonovani","Uninfected_Mouse"))
+  "Lama_Uninfected_4h","Lama_Uninfected_24h","Lama_Uninfected_48h","Lama_Uninfected_72h",
+  "Lama_Infected_4h","Lama_Infected_24h","Lama_Infected_48h","Lama_Infected_72h"))
 
 severity.out <- binarizeCategoricalColumns(colData$severity,
                                            includePairwise = FALSE,
@@ -308,7 +287,7 @@ severity.out <- binarizeCategoricalColumns(colData$severity,
 traits <- cbind(traits, severity.out)
 rownames(traits) <- traits$SampleName
 traits <- traits %>% select(-1,-2,-3)
-traits = traits[4:5]
+traits = traits[3:10]
 # Define numbers of genes and samples
 nSamples <- nrow(norm.counts)
 nGenes <- ncol(norm.counts)
@@ -331,42 +310,47 @@ head(heatmap.data)
 heatmap.data <- heatmap.data %>% 
   column_to_rownames(var = 'Row.names')
 
-colnames(heatmap.data)
-# ordered_columns <- c(
-#   "MEpurple", "MEgreen", "MEbrown", "MEyellow", "MEturquoise", "MEmagenta",
-#   "MEpink", "MEred", "MEblack", "MEblue", "MEgreenyellow", "MEgrey",
-#   "disease_state_bin", "data.Lama_Uninfected_24h.vs.all", "data.Lama_Uninfected_48h.vs.all",
-#   "data.Lama_Uninfected_72h.vs.all", "data.Lama_Infected_4h.vs.all", "data.Lama_Infected_24h.vs.all",
-#   "data.Lama_Infected_48h.vs.all", "data.Lama_Infected_72h.vs.all"
-# )
-# 
-# # Reordenar as colunas
-# heatmap.data <- heatmap.data %>% select(all_of(ordered_columns))
+
+ordered_columns <- c(
+  "MEpurple", "MEgreen", "MEbrown", "MEyellow", "MEturquoise", "MEmagenta",
+  "MEpink", "MEred", "MEblack", "MEblue", "MEgreenyellow", "MEgrey",
+  "disease_state_bin", "data.Lama_Uninfected_24h.vs.all", "data.Lama_Uninfected_48h.vs.all",
+  "data.Lama_Uninfected_72h.vs.all", "data.Lama_Infected_4h.vs.all", "data.Lama_Infected_24h.vs.all",
+  "data.Lama_Infected_48h.vs.all", "data.Lama_Infected_72h.vs.all"
+)
+
+# Reordenar as colunas
+heatmap.data <- heatmap.data %>% select(all_of(ordered_columns))
 
 
 heatmap.data
 colnames(heatmap.data)
 
 colnames(traits)
-colnames(heatmap.data)
+
 CorLevelPlot(heatmap.data,
-             x = names(heatmap.data)[10:11],
-             y = names(heatmap.data)[1:9],rotLabX = 50,
-             col = c("cyan", "white", "grey", "purple"))
+             x = names(heatmap.data)[13:20],
+             y = names(heatmap.data)[1:12],rotLabX = 50,
+             col = c("green", "white", "grey", "red"))
 
 # write.csv(as.data.frame(heatmap.data), file = "/Users/carlitos/Desktop/PRJNA290995_lama_heatmap.data.csv", row.names = TRUE)
-
+########################################
 module.gene.mapping <- as.data.frame(bwnet$colors)
 module.gene.mapping %>% 
-  filter(`bwnet$colors` == 'yellow') %>% 
+  filter(`bwnet$colors` == 'green') %>% 
   rownames()
 
 class(bwnet$colors)
 
-valores_interesse <- c('228994','213541','229096','231386','26383','56335','210529','268420','240255','69113','211064','66400','52463',
-                       '66926','101867','52575','68789','328162','28114','13434','98956','21681','22608','107435','14534','18519','81601','244349',
-                       '54169','217127','67773','269252','12914','73242','328572','433759','15182','15183','208727','15184',
-                       '15185','56233','70315','79221','170787','93759','64383','64384','75387','68346','50721','209011')
+valores_interesse <- c("54915", "51441", "253943", "91746", "79068", "56339",
+                       "57721", "54890", "64848", "221120", "8846", "84266",
+                       "80312", "51605", "23378", "55006", "115708", "54888",
+                       "1787", "55226", "10189", "4904", "8520", "2648",
+                       "8850", "10524", "7994", "23522", "11143", "84148",
+                       "9329", "1387", "79969", "2033", "3065", "3066",
+                       "8841", "9759", "10014", "10013", "51564", "55869",
+                       "9734", "83933", "23411", "22933", "23410", "23409",
+                       "23408", "51548", "51547")
 
 bwnet$colors[valores_interesse]
 table(bwnet$colors[valores_interesse])
@@ -380,6 +364,8 @@ table(bwnet$colors[valores_interesse])
 # The module membership/intramodular connectivity is calculated as the correlation of the eigengene and the gene expression profile. 
 # This quantifies the similarity of all genes on the array to every module.
 
+
+#############################
 module.membership.measure <- cor(module_eigengenes, norm.counts, use = 'p')
 module.membership.measure.pvals <- corPvalueStudent(module.membership.measure, nSamples)
 
@@ -391,8 +377,8 @@ module.membership.measure.pvals[1:12,1:12]
 
 gene.signf.corr <- cor(norm.counts, severity.out$data.Lama_Infected_4h.vs.all, use = 'p')
 gene.signf.corr.pvals <- corPvalueStudent(gene.signf.corr, nSamples)
-gene.signf.corr=0
-gene.signf.corr.pvals=0
+
+
 gene.signf.corr.pvals %>% 
   as.data.frame() %>% 
   arrange(V1) %>% 
@@ -404,7 +390,7 @@ gene.signf.corr.pvals %>%
 
 # 7. analisis enrich
 green_genes <- module.gene.mapping %>% 
-  filter(`bwnet$colors` == 'yellow') %>% 
+  filter(`bwnet$colors` == 'green') %>% 
   rownames()
 
 
@@ -457,30 +443,18 @@ green_genes <- module.gene.mapping %>%
 # 
 # # EnrichMap
 # emapplot(ego)
-
+#######################
 library(clusterProfiler)
 library(org.Hs.eg.db)  # Use a base de dados apropriada para o seu organismo
 
-
-
-
-
 # Supondo que os IDs dos genes sejam Entrez IDs
-library(org.Mm.eg.db)
-
-# Realizar a análise de enriquecimento GO
-ego <- enrichGO(
-  gene          = green_genes,
-  OrgDb         = org.Mm.eg.db,
-  keyType       = 'ENTREZID',  # Ajuste o keyType conforme necessário
-  ont           = "ALL",  # Pode ser "BP", "MF", "CC", ou "ALL"
-  pAdjustMethod = "BH",
-  qvalueCutoff  = 0.05,
-  readable      = TRUE
-)
-
-# Visualizar os resultados
-head(ego)
+ego <- enrichGO(gene          = green_genes,
+                OrgDb         = org.Hs.eg.db,
+                keyType       = 'ENTREZID',  # Ajuste o keyType conforme necessário
+                ont           = "ALL",  # Pode ser "BP", "MF", "CC", ou "ALL"
+                pAdjustMethod = "BH",
+                qvalueCutoff  = 0.05,
+                readable      = TRUE)
 
 # Visualize os resultados
 head(ego)
@@ -490,154 +464,47 @@ library(enrichplot)
 # Dotplot
 dotplot(ego)
 
- # Barplot
+# Barplot
 barplot(ego, showCategory = 10)
+
 
 # Supondo que o objeto ego já está criado
 ego <- pairwise_termsim(ego)
 
 library(ggplot2)
-
 emap <- emapplot(ego)
-# Ajustar o tamanho dos labels dos termos para um tamanho menor
 emap + theme(
-  legend.text = element_text(size = 8),
-  legend.title = element_text(size = 8),
-  plot.title = element_text(size = 10, face = "bold"),
-  axis.text.x = element_text(size = 8),
-  axis.text.y = element_text(size = 8)
+  # axis.text = element_text(size = 10),         # Tamanho do texto dos eixos
+  # axis.title = element_text(size = 12),        # Tamanho do título dos eixos
+  legend.text = element_text(size = 10),       # Tamanho do texto da legenda
+  legend.title = element_text(size = 10),      # Tamanho do título da legenda
+  plot.title = element_text(size = 10, face = "bold")  # Tamanho e estilo do título do gráfico
 )
 
+
+
 ego_df <- as.data.frame(ego)
-write.csv(ego_df, file = "/Users/carlitos/Desktop/enrichment_results_lodo_PRJNA601732.csv", row.names = FALSE)
-
-
-#####################################################
-
-
-# Função para mapear IDs Entrez humanos para ortólogos de Mus musculus
-map_human_to_mouse <- function(entrez_ids, human_dataset = "hsapiens_gene_ensembl", mouse_dataset = "mmusculus_gene_ensembl") {
-  library(biomaRt)
-  
-  # Conectar ao BioMart humano
-  # ensembl_human <- useEnsembl(biomart = "genes", dataset = human_dataset)
-  # ensembl_human <- useEnsembl(biomart = "genes", 
-  #                             dataset = human_dataset, 
-  #                             host = "asia.ensembl.org")
-  ensembl_human <- useEnsembl(
-    biomart = "genes",
-    dataset = "hsapiens_gene_ensembl",
-    version = 109  # Substitua pela versão que deseja usar
-  )
-  
-  
-  # Obter o mapeamento humano de entrezgene_id para ensembl_gene_id
-  human_mapping <- getBM(
-    attributes = c("entrezgene_id", "ensembl_gene_id"),
-    filters = "entrezgene_id",
-    values = entrez_ids,
-    mart = ensembl_human
-  )
-  
-  # Obter ortólogos de Mus musculus
-  orthologs <- getBM(
-    attributes = c("ensembl_gene_id", "mmusculus_homolog_associated_gene_name", 
-                   "mmusculus_homolog_ensembl_gene"),
-    filters = "ensembl_gene_id",
-    values = human_mapping$ensembl_gene_id,
-    mart = ensembl_human
-  )
-  
-  # Combinar resultados humanos e ortólogos
-  combined_result <- merge(human_mapping, orthologs, by = "ensembl_gene_id")
-  
-  # Conectar ao BioMart de Mus musculus
-  ensembl_mouse <- useEnsembl(biomart = "genes", dataset = mouse_dataset)
-  
-  # Obter mapeamento de IDs Ensembl para IDs Entrez em Mus musculus
-  mouse_mapping <- getBM(
-    attributes = c("ensembl_gene_id", "entrezgene_id"),
-    filters = "ensembl_gene_id",
-    values = combined_result$mmusculus_homolog_ensembl_gene,
-    mart = ensembl_mouse
-  )
-  
-  # Combinar com o resultado final
-  final_result <- merge(combined_result, mouse_mapping, 
-                        by.x = "mmusculus_homolog_ensembl_gene", 
-                        by.y = "ensembl_gene_id", 
-                        all.x = TRUE)
-  
-  # Renomear a nova coluna
-  colnames(final_result)[ncol(final_result)] <- "mmusculus_homolog_entrezgene"
-  
-  return(final_result)
-}
-
-#######################
-
-library(ggplot2)
-library(enrichplot)
-library(clusterProfiler)
-library(org.Mm.eg.db)
-library(org.Hs.eg.db)  # Use o banco de dados apropriado para o seu organismo
-# Extrair genes do módulo preto
+write.csv(ego_df, file = "/Users/carlitos/Desktop/enrichment_results.csv", row.names = FALSE)
+##############################################################
 
 
 genes344 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 1)
 valores_interesse344 = genes344$Entrez_ID
 valores_interesse344
 
-######
-listEnsembl()
-listEnsemblArchives()
-######
-
-result344 <- map_human_to_mouse(valores_interesse344)
-print(result344)
-
-########
-library(biomaRt)
-listEnsembl()
-
-########
-# Converter as colunas para o tipo character
-result344$entrezgene_id.x <- as.character(result344$entrezgene_id.x)
-result344$mmusculus_homolog_entrezgene <- as.character(result344$mmusculus_homolog_entrezgene)
-
-# Verificar os tipos das colunas
-str(result344)
-
-
-
-
-
-
-valores_interesse_convertidos344 = result344$mmusculus_homolog_entrezgene
-
-valores_interesse_convertidos344  
-
-
 genes285 = read_excel("/Users/carlitos/Desktop/acetylation_344.xlsx", sheet = 2)
 valores_interesse285 = genes285$Entrez_ID
-result285 <- map_human_to_mouse(valores_interesse285)
-# Converter as colunas para o tipo character
-result285$entrezgene_id.x <- as.character(result285$entrezgene_id.x)
-result285$mmusculus_homolog_entrezgene <- as.character(result285$mmusculus_homolog_entrezgene)
+valores_interesse285
 
-# Verificar os tipos das colunas
-str(result285)
-
-
-print(result285)
-valores_interesse_convertidos285 = result285$mmusculus_homolog_entrezgene
-valores_interesse_convertidos285
-
-valores_interesse <- c('228994','213541','229096','231386','26383','56335','210529','268420','240255','69113','211064','66400','52463',
-                       '66926','101867','52575','68789','328162','28114','13434','98956','21681','22608','107435','14534','18519','81601','244349',
-                       '54169','217127','67773','269252','12914','73242','328572','433759','15182','15183','208727','15184',
-                       '15185','56233','70315','79221','170787','93759','64383','64384','75387','68346','50721','209011')
-
+valores_interesse <- c("54915", "51441", "253943", "91746", "79068", "56339",
+                       "57721", "54890", "64848", "221120", "8846", "84266",
+                       "80312", "51605", "23378", "55006", "115708", "54888",
+                       "1787", "55226", "10189", "4904", "8520", "2648",
+                       "8850", "10524", "7994", "23522", "11143", "84148",
+                       "9329", "1387", "79969", "2033", "3065", "3066",
+                       "8841", "9759", "10014", "10013", "51564", "55869",
+                       "9734", "83933", "23411", "22933", "23410", "23409",
+                       "23408", "51548", "51547")
 
 colors_geral = bwnet$colors
 
@@ -647,92 +514,40 @@ colnames(df_table_geral) <- c("Colors_geral", "Frequency")
 df_table_geral
 
 colors_interesse = bwnet$colors[valores_interesse]
-
-
-
-table(bwnet$colors[valores_interesse_convertidos344])
-
-
-colors_interesse = bwnet$colors[valores_interesse_convertidos344]
-
+colors_interesse
+bwnet$colors[valores_interesse]
+table(bwnet$colors[valores_interesse])
 
 
 df_table <- as.data.frame(table(colors_interesse), stringsAsFactors = FALSE)
-
 colnames(df_table) <- c("Colors", "Frequency")
 
-
-
-df_colors <- data.frame(genes = valores_interesse, Colors = bwnet$colors[valores_interesse], row.names = NULL)
-
-
-# Realizar o merge baseado na coluna 'genes' de df_colors344 e 'mmusculus_homolog_entrezgene' de result344
-df_colors <- merge(
-  df_colors,
-  result344[, c("mmusculus_homolog_entrezgene", "mmusculus_homolog_associated_gene_name")],
-  by.x = "genes",
-  by.y = "mmusculus_homolog_entrezgene",
-  all.x = TRUE
-)
-
-# Verificar o resultado
-head(df_colors)
-
-
+df_colors <- data.frame(genes = valores_interesse, Colors = colors_interesse)
 
 ################################################################################
-colors_interesse344 = bwnet$colors[valores_interesse_convertidos344]
+colors_interesse344 = bwnet$colors[valores_interesse344]
 colors_interesse344
-bwnet$colors[valores_interesse_convertidos344]
-table(bwnet$colors[valores_interesse_convertidos344])
+bwnet$colors[valores_interesse344]
+table(bwnet$colors[valores_interesse344])
 
 
 df_table344 <- as.data.frame(table(colors_interesse344), stringsAsFactors = FALSE)
 colnames(df_table344) <- c("Colors", "Frequency")
 
-df_colors344 <- data.frame(genes = valores_interesse_convertidos344, Colors = colors_interesse344)
-
-# Certifique-se de que as colunas de IDs estejam no mesmo formato (character)
-df_colors344$genes <- as.character(df_colors344$genes)
-result344$mmusculus_homolog_entrezgene <- as.character(result344$mmusculus_homolog_entrezgene)
-
-# Realizar o merge baseado na coluna 'genes' de df_colors344 e 'mmusculus_homolog_entrezgene' de result344
-df_colors344 <- merge(
-  df_colors344,
-  result344[, c("mmusculus_homolog_entrezgene", "mmusculus_homolog_associated_gene_name")],
-  by.x = "genes",
-  by.y = "mmusculus_homolog_entrezgene",
-  all.x = TRUE
-)
-
-# Verificar o resultado
-head(df_colors344)
-
-
+df_colors344 <- data.frame(genes = valores_interesse344, Colors = colors_interesse344)
 ################################################################################
 
-colors_interesse285 = bwnet$colors[valores_interesse_convertidos285]
+colors_interesse285 = bwnet$colors[valores_interesse285]
 colors_interesse285
-bwnet$colors[valores_interesse_convertidos285]
-table(bwnet$colors[valores_interesse_convertidos285])
+bwnet$colors[valores_interesse285]
+table(bwnet$colors[valores_interesse285])
 
 
 df_table285 <- as.data.frame(table(colors_interesse285), stringsAsFactors = FALSE)
 colnames(df_table285) <- c("Colors", "Frequency")
 
-df_colors285 <- data.frame(genes = valores_interesse_convertidos285, Colors = colors_interesse285)
+df_colors285 <- data.frame(genes = valores_interesse285, Colors = colors_interesse285)
 
-# Realizar o merge baseado na coluna 'genes' de df_colors344 e 'mmusculus_homolog_entrezgene' de result344
-df_colors285 <- merge(
-  df_colors285,
-  result285[, c("mmusculus_homolog_entrezgene", "mmusculus_homolog_associated_gene_name")],
-  by.x = "genes",
-  by.y = "mmusculus_homolog_entrezgene",
-  all.x = TRUE
-)
-
-# Verificar o resultado
-head(df_colors285)
 
 
 df_colors
@@ -879,7 +694,7 @@ for (plot_info in plots_info) {
 }
 
 # Salva o arquivo Excel no local especificado
-saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_PRJNA601732_LODO.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_PRJNA290995_lama.xlsx", overwrite = TRUE)
 
 # Remove os arquivos temporários
 for (plot_info in plots_info) {
@@ -887,218 +702,45 @@ for (plot_info in plots_info) {
 }
 
 
-#############################################################
-
-
-# 6B. Intramodular analysis: Identifying driver genes ---------------
-
-# Calculate the module membership and the associated p-values
-
-# The module membership/intramodular connectivity is calculated as the correlation of the eigengene and the gene expression profile. 
-# This quantifies the similarity of all genes on the array to every module.
-
-# module.membership.measure <- cor(module_eigengenes, norm.counts, use = 'p')
-# module.membership.measure.pvals <- corPvalueStudent(module.membership.measure, nSamples)
-# 
-# 
-# module.membership.measure.pvals[1:12,1:12]
-# 
-# 
-# # Calculate the gene significance and associated p-values
-# 
-# gene.signf.corr <- cor(norm.counts, severity.out$data.Lama_Infected_4h.vs.all, use = 'p')
-# gene.signf.corr.pvals <- corPvalueStudent(gene.signf.corr, nSamples)
-# 
-# 
-# gene.signf.corr.pvals %>% 
-#   as.data.frame() %>% 
-#   arrange(V1) %>% 
-#   head(25)
-# 
-# 
-# # Using the gene significance you can identify genes that have a high significance for trait of interest 
-# # Using the module membership measures you can identify genes with high module membership in interesting modules.
-# 
-# # 7. analisis enrich
-# green_genes <- module.gene.mapping %>% 
-#   filter(`bwnet$colors` == 'brown') %>% 
-#   rownames()
-
-
-
-# library(DESeq2)
-# 
-# colData <- colData[,-3]
-# 
-# dds_ana <- DESeqDataSetFromMatrix(countData = data.subset,
-#                               colData = colData,
-#                               design = ~Treatment)
-# 
-# 
-# dds_ana <- DESeq(dds_ana)
-# 
-# #######
-# 
-# # Comparação personalizada entre Lama_Infected_4h e Lama_Uninfected_4h
-# res <- results(dds_ana, contrast = c("Treatment", "Lama_Infected_72h", "Lama_Uninfected_72h"))
-# 
-# # Aplicar shrinkage do log2 fold change
-# res <- lfcShrink(dds_ana, contrast = c("Treatment", "Lama_Infected_72h", "Lama_Uninfected_72h"),type = "normal")
-# 
-# # Visualizar resultados
-# head(res)
-# 
-# # Filtrar genes com p-valor ajustado < 0.05 e |log2FoldChange| > 1
-# diff_genes <- rownames(res[which(res$padj < 0.05 & abs(res$log2FoldChange) > 1), ])
-# diff_genes
-# library(clusterProfiler)
-# library(org.Hs.eg.db)  # Use a base de dados apropriada para o seu organismo
-# # Supondo que os IDs dos genes sejam Entrez IDs
-# ego <- enrichGO(gene          = diff_genes,
-#                 OrgDb         = org.Hs.eg.db,
-#                 keyType       = 'ENTREZID',  # Ajuste o keyType conforme necessário
-#                 ont           = "ALL",  # Pode ser "BP", "MF", "CC", ou "ALL"
-#                 pAdjustMethod = "BH",
-#                 qvalueCutoff  = 0.05,
-#                 readable      = TRUE)
-# 
-# # Visualizar os resultados
-# head(ego)
-# library(enrichplot)
-# 
-# # Dotplot
-# dotplot(ego)
-# 
-# # Barplot
-# barplot(ego, showCategory = 10)
-# 
-# # EnrichMap
-# emapplot(ego)
-# 
-# library(clusterProfiler)
-# library(org.Hs.eg.db)  # Use a base de dados apropriada para o seu organismo
-# 
-# # Supondo que os IDs dos genes sejam Entrez IDs
-# ego <- enrichGO(gene          = green_genes,
-#                 OrgDb         = org.Hs.eg.db,
-#                 keyType       = 'ENTREZID',  # Ajuste o keyType conforme necessário
-#                 ont           = "ALL",  # Pode ser "BP", "MF", "CC", ou "ALL"
-#                 pAdjustMethod = "BH",
-#                 qvalueCutoff  = 0.05,
-#                 readable      = TRUE)
-# 
-# # Visualize os resultados
-# head(ego)
-# 
-# library(enrichplot)
-# 
-# # Dotplot
-# dotplot(ego)
-# 
-# # Barplot
-# barplot(ego, showCategory = 10)
-# 
-# 
-# # Supondo que o objeto ego já está criado
-# ego <- pairwise_termsim(ego)
-# 
-# library(ggplot2)
-# 
-# emap <- emapplot(ego)
-# # Ajustar o tamanho dos labels dos termos para um tamanho menor
-# emap + theme(
-#   legend.text = element_text(size = 8),
-#   legend.title = element_text(size = 8),
-#   plot.title = element_text(size = 10, face = "bold"),
-#   axis.text.x = element_text(size = 8),
-#   axis.text.y = element_text(size = 8)
-# )
-# 
-# 
-# 
-# ego_df <- as.data.frame(ego)
-# write.csv(ego_df, file = "/Users/carlitos/Desktop/enrichment_results.csv", row.names = FALSE)
-
 # Carregar as bibliotecas necessárias
-# library(EnsDb.Hsapiens.v86)
-# library(Homo.sapiens)
-# library(AnnotationDbi)
-# library(org.Hs.eg.db)
-# 
-# # Suponha que 'geneIDs' seja uma lista de IDs de genes a partir do conjunto de dados
-# geneIDs <- colnames(norm.counts)
-# 
-# # Obter os símbolos dos genes e nomes completos
-# geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
-# geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
+library(EnsDb.Hsapiens.v86)
+library(Homo.sapiens)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
 
-
-library(org.Mm.eg.db)  # Banco de dados de anotações para Mus musculus
-
-# Suponha que 'geneIDs' seja uma lista de IDs de genes de camundongo
+# Suponha que 'geneIDs' seja uma lista de IDs de genes a partir do conjunto de dados
 geneIDs <- colnames(norm.counts)
 
-# Obter os símbolos dos genes e nomes completos para Mus musculus
-geneSymbols <- mapIds(org.Mm.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
-geneNames <- mapIds(org.Mm.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
+# Obter os símbolos dos genes e nomes completos
+geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
+geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
 
-# Visualizar os resultados
-head(geneSymbols)
-head(geneNames)
-
-
-
-length(geneIDs)       # Total de IDs de genes
-length(bwnet$colors)  # Cores dos módulos
-length(geneSymbols)   # Símbolos dos genes
-length(geneNames)     # Nomes dos genes
-
-# Ajustar geneSymbols e geneNames para incluir apenas os IDs presentes em geneIDs
-geneSymbols <- geneSymbols[geneIDs]
-geneNames <- geneNames[geneIDs]
-# Certificar que as cores correspondem aos genes
-moduleColors <- bwnet$colors[geneIDs]
-
-
-# Criar o data.frame
+# Criar uma tabela de nodos com cores dos módulos e anotações adicionais
 nodeData <- data.frame(
   Node = geneIDs,
-  ModuleColor = moduleColors,
+  ModuleColor = bwnet$colors,
   GeneSymbol = geneSymbols,
-  GeneName = geneNames,
-  stringsAsFactors = FALSE
+  GeneName = geneNames
 )
-
-
-
-# # Criar uma tabela de nodos com cores dos módulos e anotações adicionais
-# nodeData <- data.frame(
-#   Node = geneIDs,
-#   ModuleColor = bwnet$colors,
-#   GeneSymbol = geneSymbols,
-#   GeneName = geneNames
-# )
 
 # Remover genes sem informações de símbolo ou nome, se necessário
 nodeData <- na.omit(nodeData)
 
 # Exportar tabela de nodos para uso no Cytoscape
-write.table(nodeData, "./experimentos/PRJNA601732 lodo/CytoscapeNodeFile-PRJNA601732 lodo.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+write.table(nodeData, "./experimentos/PRJNA290995_lama/CytoscapeNodeFile-PRJNA290995_lama.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 
 
-TOM = TOMsimilarityFromExpr(norm.counts, power = 12)
-# save(TOM, file = "/Users/carlitos/Desktop/resultados/PRJNA601732 lodo/TOM.RData")
-load(file = "/Users/carlitos/Desktop/resultados/PRJNA601732 lodo/TOM.RData")
 
-
+TOM = TOMsimilarityFromExpr(norm.counts, power = soft_power)
+save(TOM, file = "/Users/carlitos/Desktop/resultados/PRJNA290995_lama/TOM_power28.RData")
+load(file = "/Users/carlitos/Desktop/resultados/PRJNA290995_lama/TOM_power28.RData")
 
 
 # Definir limiar para TOM
-threshold <- 0.58
+threshold <- 0.13
 
 sum(TOM > threshold)
-
 
 # Obter os nomes dos genes
 genes <- colnames(norm.counts)
@@ -1122,13 +764,6 @@ edgeData <- data.frame(
 edgeData$fromAltName <- nodeData$GeneSymbol[match(edgeData$fromNode, nodeData$Node)]
 edgeData$toAltName <- nodeData$GeneSymbol[match(edgeData$toNode, nodeData$Node)]
 
-# Exportar tabela de arestas para o Cytoscape
-write.table(edgeData, "./experimentos/PRJNA601732 lodo/CytoscapeEdgeFile-PRJNA601732 lodo.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
-# Mensagem de conclusão
-cat("Arquivos 'CytoscapeEdgeFile-PRJNA290995.txt' e 'CytoscapeNodeFile-PRJNA290995.txt' foram gerados com sucesso.\n")
-
-
-
-# 
+# Exportar tawnla de arestas para o Cytoscape
+write.table(edgeData, "./experimentos/PRJNA290995_lama/CytoscapeEdgeFile-PRJNA290995_lama.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 

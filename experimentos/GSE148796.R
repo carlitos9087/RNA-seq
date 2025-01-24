@@ -1352,7 +1352,7 @@ for (plot_info in plots_info) {
 }
 
 # Salva o arquivo Excel no local especificado
-saveWorkbook(wb, "/Users/carlitos/Desktop/", overwrite = TRUE)
+saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_GSE148796.xlsx", overwrite = TRUE)
 
 # Remove os arquivos temporários
 for (plot_info in plots_info) {
@@ -1517,18 +1517,18 @@ nodeData <- data.frame(
 nodeData <- na.omit(nodeData)
 
 # Exportar tabela de nodos para uso no Cytoscape
-write.table(nodeData, "./experimentos/PRJNA290995_lmj/CytoscapeNodeFile-PRJNA290995_lmj.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+write.table(nodeData, "./experimentos/GSE148796/CytoscapeNodeFile-GSE148796.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 
 
 
-# TOM = TOMsimilarityFromExpr(norm.counts, power = 16)
-# save(TOM, file = "/Users/carlitos/Desktop/resultados/PRJNA290995_lmj/TOM_power16.RData")
-load(file = "/Users/carlitos/Desktop/resultados/PRJNA290995_lmj/TOM_power16.RData")
+# TOM = TOMsimilarityFromExpr(norm.counts, power = soft_power)
+# save(TOM, file = "/Users/carlitos/Desktop/resultados/GSE148796 HIV/TOM_power16.RData")
+load(file = "/Users/carlitos/Desktop/resultados/GSE148796 HIV/TOM_power16.RData")
 
 
 # Definir limiar para TOM
-threshold <- 0.17
+threshold <- 0.34
 
 sum(TOM > threshold)
 
@@ -1555,47 +1555,11 @@ edgeData$fromAltName <- nodeData$GeneSymbol[match(edgeData$fromNode, nodeData$No
 edgeData$toAltName <- nodeData$GeneSymbol[match(edgeData$toNode, nodeData$Node)]
 
 # Exportar tabela de arestas para o Cytoscape
-write.table(edgeData, "./experimentos/PRJNA290995_lmj/CytoscapeEdgeFile-PRJNA290995_lmj.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
-# Mensagem de conclusão
-cat("Arquivos 'CytoscapeEdgeFile-PRJNA290995.txt' e 'CytoscapeNodeFile-PRJNA290995.txt' foram gerados com sucesso.\n")
+write.table(edgeData, "./experimentos/GSE148796/CytoscapeEdgeFile-GSE148796.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 
 
-
-
-
-
-# 
-# 
-# # Carregar pacotes necessários
-# library(org.Hs.eg.db)
-# library(AnnotationDbi)
-# 
-# # Suponha que 'valores_interesse' contenha os IDs de genes relevantes
-# geneIDs <- valores_interesse
-# 
-# # Obter os símbolos dos genes com base nos IDs
-# geneSymbols <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
-# geneNames <- mapIds(org.Hs.eg.db, keys = geneIDs, column = "GENENAME", keytype = "ENTREZID", multiVals = "first")
-# 
-# # Criar o data frame com cores e símbolos
-# geneData <- data.frame(
-#   GeneID = geneIDs,
-#   ModuleColor = bwnet$colors[geneIDs],  # Usando geneIDs em vez de valores_interesse
-#   GeneSymbol = geneSymbols,
-#   GeneName = geneNames
-# )
-# 
-# # Remover linhas com valores NA, se necessário
-# geneData <- na.omit(geneData)
-# 
-# # Visualizar o data frame resultante
-# print(geneData)
-# 
-# # Exportar para um arquivo
-# write.table(geneData, "genes_com_modulos_PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
+# GSE148796 HIV
 
 
 
