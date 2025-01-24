@@ -567,7 +567,7 @@ for (plot_info in plots_info) {
 }
 
 # Salva o arquivo Excel no local especificado
-saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_PRJNA290995.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "/Users/carlitos/Desktop/bwnet_colors_PRJNA290995_lmj.xlsx", overwrite = TRUE)
 
 # Remove os arquivos temporários
 for (plot_info in plots_info) {
@@ -732,10 +732,20 @@ nodeData <- data.frame(
 nodeData <- na.omit(nodeData)
 
 # Exportar tabela de nodos para uso no Cytoscape
-write.table(nodeData, "./experimentos/PRJNA290995_lmj/CytoscapeNodeFile-PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+write.table(nodeData, "./experimentos/PRJNA290995_lmj/CytoscapeNodeFile-PRJNA290995_lmj.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+
+
+
+# TOM = TOMsimilarityFromExpr(norm.counts, power = 16)
+# save(TOM, file = "/Users/carlitos/Desktop/resultados/PRJNA290995_lmj/TOM_power16.RData")
+load(file = "/Users/carlitos/Desktop/resultados/PRJNA290995_lmj/TOM_power16.RData")
+
 
 # Definir limiar para TOM
-threshold <- 0.148
+threshold <- 0.17
+
+sum(TOM > threshold)
 
 # Obter os nomes dos genes
 genes <- colnames(norm.counts)
@@ -760,7 +770,7 @@ edgeData$fromAltName <- nodeData$GeneSymbol[match(edgeData$fromNode, nodeData$No
 edgeData$toAltName <- nodeData$GeneSymbol[match(edgeData$toNode, nodeData$Node)]
 
 # Exportar tabela de arestas para o Cytoscape
-write.table(edgeData, "./experimentos/PRJNA290995_lmj/CytoscapeEdgeFile-PRJNA290995.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+write.table(edgeData, "./experimentos/PRJNA290995_lmj/CytoscapeEdgeFile-PRJNA290995_lmj.txt", sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 # Mensagem de conclusão
 cat("Arquivos 'CytoscapeEdgeFile-PRJNA290995.txt' e 'CytoscapeNodeFile-PRJNA290995.txt' foram gerados com sucesso.\n")
