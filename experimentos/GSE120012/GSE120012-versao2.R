@@ -18,7 +18,7 @@ BiocManager::install(c("Mus.musculus", "Homo.sapiens"))
 
 
 setwd("/Users/carlitos/Desktop/RNA-seq/")
-# setwd("/Users/carlitos/Documents/")
+setwd("/Users/carlitos/Documents/")
 library(dplyr)
 library(ggrepel)
 library(biomaRt)
