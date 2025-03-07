@@ -1,3 +1,4 @@
+# install.packages("pheatmap")
 setwd("/Users/carlitos/Desktop/RNA-seq/")
 # setwd("/Users/carlitos/Documents/")
 library(dplyr)
@@ -17,7 +18,7 @@ library(gridExtra)
 library(stringr)
 library(readxl)
 library(openxlsx)
-library(org.Hs.eg.db) 
+library(ggrepel)
 
 
 tabular_dir  <- "Deseq2/SRP377060 - Leishmania/"
@@ -38,7 +39,9 @@ rownames(combined_df) = combined_df$Geneid
 combined_df = combined_df[,-1]
 
 data = combined_df
+
 colnames(data)
+
 # dados da amostra
 phenoData  <-  read_excel("Deseq2/SRP377060 - Leishmania/SRP377060.xlsx", col_names = TRUE)
 lista  <- phenoData$id
@@ -64,173 +67,94 @@ table(gsg$goodSamples)
 # remove genes that are detectd as outliers
 data <- data[gsg$goodGenes == TRUE,]
 
-# detect outlier samples - hierarchical clustering - method 1
-htree <- hclust(dist(t(data)), method = "average")
-plot(htree)
 
 
-###########################################################
-# pca - method 2
-pca <- prcomp(t(data))
-pca.dat <- pca$x
+################################################################
 
-pca.var <- pca$sdev^2
-pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
-
-pca.dat <- as.data.frame(pca.dat)
-
-ggplot(pca.dat, aes(PC1, PC2)) +
-  geom_point() +
-  geom_text(label = rownames(pca.dat)) +
-  labs(x = paste0('PC1: ', pca.var.percent[1], ' %'),
-       y = paste0('PC2: ', pca.var.percent[2], ' %'))
-###########################################################
-colnames(data)
-# exclude outlier samples
-samples.to.be.excluded <- c("together_than_RNA_was_isolated_SRR1184508")
-data.subset <- data[,!(colnames(data) %in% samples.to.be.excluded)]
-
-
-
-pca <- prcomp(t(data.subset))
-pca.dat <- pca$x
-pca.var <- pca$sdev^2
-pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
-pca.dat <- as.data.frame(pca.dat)
-library(ggrepel)
-ggplot(pca.dat, aes(PC1, PC2)) +
-  geom_point() +
-  geom_text_repel(aes(label = rownames(pca.dat)),
-                  box.padding = 0.5,   # Ajuste o espaçamento ao redor do rótulo
-                  point.padding = 0.5, # Ajuste o espaçamento entre o ponto e o rótulo
-                  segment.color = 'grey50', # Cor das linhas conectando rótulos aos pontos
-                  segment.size = 0.5) +    # Espessura das linhas
-  labs(x = paste0('PC1: ', pca.var.percent[1], ' %'),
-       y = paste0('PC2: ', pca.var.percent[2], ' %'))
-
-
-#########################################################################################
-log_counts <- log2(data.subset + 1)
-# add a colorbar along the heatmap with sample condition
-x = melt(as.matrix(log_counts))
-
-colnames(x) = c('gene_id', 'sample', 'value')
-ggplot(x, aes(x=value, color=sample)) + 
-  geom_density() +
-  guides(color = guide_legend(ncol = 2)) +
-  theme( legend. = 2,
-         legend.margin = margin(0, 0, 0, 0),  # Ajuste conforme necessário
-         legend.position = "right",
-         legend.text = element_text(size = 8),   # Ajuste o valor para o tamanho da fonte
-         legend.key.size = unit(1.3, "lines")    # Mantém o tamanho dos ícones; ajuste conforme necessário
-  )
+library(DESeq2)
+library(ggplot2)
+library(pheatmap)
+library(RColorBrewer)
+run_deseq_analysis <- function(data, phenoData, group1, group2, output_file) {
+  # Criar diretório se não existir
+  dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
+  
+  # Filtrando apenas as amostras relevantes
+  samples <- phenoData$SampleName[phenoData$Treatment %in% c(group1, group2)]
+  
+  # Criando subconjunto de dados
+  counts <- data[, samples]
+  pheno <- phenoData[phenoData$SampleName %in% samples, ]
+  
+  # Criando objeto DESeqDataSet
+  dds <- DESeqDataSetFromMatrix(countData = counts,
+                                colData = pheno,
+                                design = ~ Treatment)
+  
+  # Rodando a análise DESeq2
+  dds <- DESeq(dds)
+  
+  # Extraindo resultados
+  res <- results(dds, contrast = c("Treatment", group2, group1))
+  
+  # Salvando resultados em formato tabular
+  write.table(as.data.frame(res), file = output_file, sep = "\t", quote = FALSE, row.names = TRUE)
+  
+  return(res)
+}
 
 
 
+run_pca_analysis <- function(dds, output_file) {
+  rld <- rlog(dds, blind = TRUE)
+  pca_data <- plotPCA(rld, intgroup = "Treatment", returnData = TRUE)
+  
+  # Calculando a variância explicada
+  pca_variance <- attr(pca_data, "percentVar")
+  
+  # Criando o gráfico com rótulos ajustados
+  p <- ggplot(pca_data, aes(PC1, PC2, color = Treatment, label = rownames(pca_data))) +
+    geom_point(size = 3) +
+    geom_text_repel(size = 3, max.overlaps = 10) +  # Evita sobreposição e corte de nomes
+    xlab(paste0("PC1: ", round(pca_variance[1] * 100, 2), "% variance")) +
+    ylab(paste0("PC2: ", round(pca_variance[2] * 100, 2), "% variance")) +
+    theme_minimal()
+  
+  ggsave(output_file, p, width = 6, height = 5)  # Ajuste no tamanho do gráfico
+  
+  return(p)
+}
 
-#########################################################################################
 
-# 3. Normalization ----------------------------------------------------------------------
-# create a deseq2 dataset
-
-row.names(phenoData)
-colnames(data)
-# exclude outlier samples
-samples.to.be.excluded <- c("together_than_RNA_was_isolated_SRR1184508")
-data.subset <- data[,!(colnames(data) %in% samples.to.be.excluded)]
-
-# exclude outlier samples
-colData <- phenoData %>% 
-  filter(!row.names(.) %in% samples.to.be.excluded)
+run_sample_distances <- function(dds, output_file) {
+  rld <- rlog(dds, blind = TRUE)
+  sampleDists <- dist(t(assay(rld)))
+  sampleDistMatrix <- as.matrix(sampleDists)
+  rownames(sampleDistMatrix) <- colnames(dds)
+  colnames(sampleDistMatrix) <- colnames(dds)
+  
+  colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
+  pheatmap(sampleDistMatrix, col = colors, filename = output_file)
+}
 
 
-# fixing column names in colData
-names(colData)
-names(colData) <- gsub(':ch1', '', names(colData))
-names(colData) <- gsub('\\s', '_', names(colData))
-colData <- colData[1:2]
-colnames(data.subset)
-rownames(colData)<- colData$SampleName
-rownames(colData)
-# making the rownames and column names identical
-all(rownames(colData) %in% colnames(data.subset))
-all(rownames(colData) == colnames(data.subset))
+# Executando a função para as comparações desejadas
+# res_nf_ilp <- run_deseq_analysis(data, phenoData, "Non-Infected", "Infected_Live_Parasites", "./Deseq2/SRP377060 - Leishmania/results/DESeq2_NonInfected_vs_InfectedLive.tabular")
+# res_nf_ifp <- run_deseq_analysis(data, phenoData, "Non-Infected", "Infected_Fixed_Parasites", "./Deseq2/SRP377060 - Leishmania/results/DESeq2_NonInfected_vs_InfectedFixed.tabular")
 
-# cont = 1
-# for (i in rownames(colData)){
-#   # print(rownames(colData)[cont])
-#   a = colnames(data.subset)[cont]
-#   b = rownames(colData)[cont]
-#   print(a == b)
-#   print(a)
-#   print(b)
-#   # print(cont)
-#   cont = cont + 1
-# }
-
-(rownames(colData))[2] == (colnames(data.subset))[2]
-
-# create dds
-dds <- DESeqDataSetFromMatrix(countData = data.subset,
-                              colData = colData,
-                              design = ~ 1) # not spcifying model
+dds_nf_ilp <- run_deseq_analysis(data, phenoData, "Non-Infected", "Infected_Live_Parasites", "./Deseq2/SRP377060 - Leishmania/results/DESeq2_NonInfected_vs_InfectedLive.tabular")
+dds_nf_ifp <- run_deseq_analysis(data, phenoData, "Non-Infected", "Infected_Fixed_Parasites", "./Deseq2/SRP377060 - Leishmania/results/DESeq2_NonInfected_vs_InfectedFixed.tabular")
+# Visualizando os primeiros resultados
+head(dds_nf_ilp)
+head(dds_nf_ifp)
 
 
 
-## remove all genes with counts < 15 in more than 75% of samples (31*0.75=23.25)
-## suggested by WGCNA on RNAseq FAQ
+# Executando PCA
+pca_nf_ilp <- run_pca_analysis(dds_nf_ilp, "./Deseq2/SRP377060 - Leishmania/results/PCA_NonInfected_vs_InfectedLive.jpeg")
+pca_nf_ifp <- run_pca_analysis(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/PCA_NonInfected_vs_InfectedFixed.jpeg")
 
-dds75 <- dds[rowSums(counts(dds) >= 15) >= 14,]
-nrow(dds75) # 13284 genes
-
-# perform variance stabilization
-dds_norm <- vst(dds75)
-
-
-# get normalized counts
-norm.counts <- assay(dds_norm) %>% 
-  t()
-
-
-
-###########################################
-# 4. Network Construction  ---------------------------------------------------
-# Choose a set of soft-thresholding powers
-power <- c(c(1:10), seq(from = 12, to = 50, by = 2))
-
-# Call the network topology analysis function
-sft <- pickSoftThreshold(norm.counts,
-                         powerVector = power,
-                         networkType = "signed",
-                         verbose = 5)
-
-
-sft.data <- sft$fitIndices
-
-# visualization to pick power
-
-a1 <- ggplot(sft.data, aes(Power, SFT.R.sq, label = Power)) +
-  geom_point() +
-  geom_text(nudge_y = 0.1) +
-  geom_hline(yintercept = 0.8, color = 'red') +
-  labs(x = 'Power', y = 'Scale free topology model fit, signed R^2') +
-  theme_classic()
-
-
-a2 <- ggplot(sft.data, aes(Power, mean.k., label = Power)) +
-  geom_point() +
-  geom_text(nudge_y = 0.1) +
-  labs(x = 'Power', y = 'Mean Connectivity') +
-  theme_classic()
-
-
-grid.arrange(a1, a2, nrow = 2)
-
-
-
-
-
-
-
-
+# Executando Sample-to-Sample Distances
+run_sample_distances(dds_nf_ilp, "./Deseq2/SRP377060 - Leishmania/results/SampleDistances_NonInfected_vs_InfectedLive.jpeg")
+run_sample_distances(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/SampleDistances_NonInfected_vs_InfectedFixed.jpeg")
 
