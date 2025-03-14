@@ -81,7 +81,7 @@ data <- data[gsg$goodGenes, ]
 # 4. Funções para análise DESeq2, PCA, Sample-to-Sample Distances,
 #    Dispersion estimates, Histogram of p-values e MA-plot
 ###########################################
-
+# Função DESeq2: análise e salvamento dos resultados
 run_deseq_analysis <- function(data, phenoData, group1, group2, output_file) {
   # Cria o diretório de saída, se não existir
   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
@@ -92,7 +92,7 @@ run_deseq_analysis <- function(data, phenoData, group1, group2, output_file) {
     stop("Nenhuma amostra encontrada para os grupos especificados.")
   }
   
-  # Subconjunto dos dados de contagem e da tabela de fenótipo
+  # Subconjunto dos dados de contagem e dos metadados
   counts <- data[, valid_samples, drop = FALSE]
   pheno <- phenoData[phenoData$SampleName %in% valid_samples, ]
   
@@ -114,6 +114,7 @@ run_deseq_analysis <- function(data, phenoData, group1, group2, output_file) {
   return(dds)
 }
 
+# Função para PCA com alta resolução (usando ggsave com dpi maior)
 run_pca_analysis <- function(dds, output_file) {
   rld <- rlog(dds, blind = TRUE)
   pca_data <- plotPCA(rld, intgroup = "Treatment", returnData = TRUE)
@@ -126,10 +127,11 @@ run_pca_analysis <- function(dds, output_file) {
     ylab(paste0("PC2: ", round(pca_variance[2] * 100, 2), "% variance")) +
     theme_minimal()
   
-  ggsave(output_file, p, width = 6, height = 5)
+  ggsave(output_file, p, width = 6, height = 5, dpi = 300)
   return(p)
 }
 
+# Função para Sample-to-Sample Distances com alta resolução
 run_sample_distances <- function(dds, output_file) {
   rld <- rlog(dds, blind = TRUE)
   sampleDists <- dist(t(assay(rld)))
@@ -138,20 +140,23 @@ run_sample_distances <- function(dds, output_file) {
   colnames(sampleDistMatrix) <- colnames(dds)
   
   colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
-  pheatmap(sampleDistMatrix, col = colors, filename = output_file)
+  pheatmap(sampleDistMatrix, col = colors, filename = output_file, 
+           width = 8, height = 6, units = "in", res = 300)
 }
 
+# Função para o gráfico de Dispersion Estimates com alta resolução
 run_dispersion_plot <- function(dds, output_file) {
   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
-  jpeg(filename = output_file, width = 800, height = 600)
+  png(filename = output_file, width = 8, height = 6, units = "in", res = 300)
   plotDispEsts(dds)
   dev.off()
 }
 
+# Função para gerar o Histograma de p-values com alta resolução
 run_pval_histogram <- function(dds, output_file) {
   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
   res <- results(dds)
-  jpeg(filename = output_file, width = 600, height = 500)
+  png(filename = output_file, width = 8, height = 6, units = "in", res = 300)
   hist(res$pvalue,
        breaks = 50,
        col = "skyblue",
@@ -160,13 +165,15 @@ run_pval_histogram <- function(dds, output_file) {
   dev.off()
 }
 
+# Função para gerar o MA-plot com alta resolução e escala de -8 a 8
 run_ma_plot <- function(dds, output_file) {
   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
   res <- results(dds)
-  jpeg(filename = output_file, width = 600, height = 500)
-  plotMA(res, main = "MA-plot", ylim = c(-2, 2))
+  png(filename = output_file, width = 8, height = 6, units = "in", res = 300)
+  plotMA(res, main = "MA-plot", ylim = c(-8, 8))
   dev.off()
 }
+
 
 ###########################################
 # 5. Execução das análises
