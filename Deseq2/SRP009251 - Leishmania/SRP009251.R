@@ -34,8 +34,14 @@ samples_to_remove <- c("DC_Infected_Live_Parasites_3_SRR19400242",
 ###########################################
 # 1. Leitura e combinação dos arquivos tabulares
 ###########################################
-tabular_dir  <- "Deseq2/SRP009251 - Leishmania/"
+base_dir <- "Deseq2/SRP009251 - Leishmania/"
+results_dir <- file.path(base_dir, "results")
+
+tabular_dir <- base_dir
 tabular_files <- list.files(path = tabular_dir, pattern = "\\.tabular$", full.names = TRUE)
+
+
+
 
 read_tabular_file <- function(file) {
   df <- read.table(file, header = TRUE, stringsAsFactors = FALSE, sep="\t")
@@ -706,7 +712,7 @@ up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_nf_ilp,
                                                        pAdjustMethod = "BH",
                                                        pvalueCutoff = 0.05,
                                                        qvalueCutoff = 0.2,
-                                                       output_file_prefix = "./Deseq2/SRP151491 - M tuberculosis/results/DESeq2_UpDown")
+                                                       output_file_prefix = "./Deseq2/SRP009251 - Leishmania/results/DESeq2_UpDown")
 
 
 

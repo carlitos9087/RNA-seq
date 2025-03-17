@@ -34,7 +34,7 @@ samples_to_remove <- c("DC_Infected_Live_Parasites_3_SRR19400242",
 ###########################################
 # 1. Leitura e combinação dos arquivos tabulares
 ###########################################
-base_dir <- "Deseq2/SRP069976 - Leishmania/"
+base_dir <- "Deseq2/SRP009251 - Leishmania/"
 results_dir <- file.path(base_dir, "results")
 
 tabular_dir <- base_dir
@@ -68,7 +68,7 @@ print(colnames(data))
 # 2. Leitura dos dados fenotípicos (phenoData)
 ###########################################
 # Supondo que o arquivo Excel contenha as colunas "id", "SampleName" e "Treatment"
-phenoData <- read_excel("./Deseq2/SRP069976 - Leishmania/SRP069976.xlsx", col_names = TRUE)
+phenoData <- read_excel("./Deseq2/SRP009251 - Leishmania/SRP009251.xlsx", col_names = TRUE)
 lista <- phenoData$id
 # phenoData <- phenoData[,-1]
 phenoData <- phenoData[,-1]# Remove a coluna "id"
@@ -399,316 +399,58 @@ run_deseq_up_down_analysis <- function(dds, up_threshold, down_threshold, padj_c
   return(list(up = up_genes, down = down_genes))
 }
 
-#######################
-run_venn_analysis_three <- function(dds1, dds2, dds3, comp1, comp2, comp3, output_prefix) {
-  library(VennDiagram)
-  library(openxlsx)
-  
-  # Extrai os resultados e converte para data.frame
-  res1 <- as.data.frame(results(dds1))
-  res2 <- as.data.frame(results(dds2))
-  res3 <- as.data.frame(results(dds3))
-  
-  # Filtra genes upregulados e downregulados, removendo os casos com NA
-  filter_genes <- function(res) {
-    list(
-      up = rownames(res)[!is.na(res$log2FoldChange) & !is.na(res$padj) & res$log2FoldChange > 1 & res$padj < 0.05],
-      down = rownames(res)[!is.na(res$log2FoldChange) & !is.na(res$padj) & res$log2FoldChange < -1 & res$padj < 0.05]
-    )
-  }
-  
-  genes1 <- filter_genes(res1)
-  genes2 <- filter_genes(res2)
-  genes3 <- filter_genes(res3)
-  
-  # Interseções e exclusividades
-  find_sets <- function(set1, set2, set3) {
-    list(
-      intersect_all = Reduce(intersect, list(set1, set2, set3)),
-      only1 = setdiff(set1, union(set2, set3)),
-      only2 = setdiff(set2, union(set1, set3)),
-      only3 = setdiff(set3, union(set1, set2)),
-      intersect_12 = setdiff(intersect(set1, set2), set3),
-      intersect_13 = setdiff(intersect(set1, set3), set2),
-      intersect_23 = setdiff(intersect(set2, set3), set1)
-    )
-  }
-  
-  up_sets <- find_sets(genes1$up, genes2$up, genes3$up)
-  down_sets <- find_sets(genes1$down, genes2$down, genes3$down)
-  
-  # Criar Venn diagrams
-  venn.diagram(
-    x = list(comp1 = genes1$up, comp2 = genes2$up, comp3 = genes3$up),
-    category.names = c(comp1, comp2, comp3),
-    filename = paste0(output_prefix, "_Venn_Up.jpeg"),
-    fill = c("red", "blue", "green"), alpha = 0.5, cex = 1.5
-  )
-  
-  venn.diagram(
-    x = list(comp1 = genes1$down, comp2 = genes2$down, comp3 = genes3$down),
-    category.names = c(comp1, comp2, comp3),
-    filename = paste0(output_prefix, "_Venn_Down.jpeg"),
-    fill = c("red", "blue", "green"), alpha = 0.5, cex = 1.5
-  )
-  
-  # Criar planilha Excel
-  wb <- createWorkbook()
-  sets <- list("Up_Intersect_All" = up_sets$intersect_all,
-               "Up_Only_Comp1" = up_sets$only1, "Up_Only_Comp2" = up_sets$only2, "Up_Only_Comp3" = up_sets$only3,
-               "Up_Intersect_12" = up_sets$intersect_12, "Up_Intersect_13" = up_sets$intersect_13, "Up_Intersect_23" = up_sets$intersect_23,
-               "Down_Intersect_All" = down_sets$intersect_all,
-               "Down_Only_Comp1" = down_sets$only1, "Down_Only_Comp2" = down_sets$only2, "Down_Only_Comp3" = down_sets$only3,
-               "Down_Intersect_12" = down_sets$intersect_12, "Down_Intersect_13" = down_sets$intersect_13, "Down_Intersect_23" = down_sets$intersect_23)
-  
-  for (sheet in names(sets)) {
-    addWorksheet(wb, sheet)
-    writeData(wb, sheet, data.frame(Gene_ID = sets[[sheet]]))
-  }
-  
-  saveWorkbook(wb, paste0(output_prefix, "_VennData.xlsx"), overwrite = TRUE)
-  message("Diagramas de Venn e tabelas gerados com sucesso!")
-}
-
-
-run_venn_analysis_three <- function(dds1, dds2, dds3, comparison1, comparison2, comparison3, output_prefix) {
-  # Extrai os resultados e converte para data.frame
-  res1 <- as.data.frame(results(dds1))
-  res2 <- as.data.frame(results(dds2))
-  res3 <- as.data.frame(results(dds3))
-  
-  # Filtra genes upregulados e downregulados
-  up1 <- rownames(res1)[!is.na(res1$log2FoldChange) & !is.na(res1$padj) & (res1$log2FoldChange > 1) & (res1$padj < 0.05)]
-  up2 <- rownames(res2)[!is.na(res2$log2FoldChange) & !is.na(res2$padj) & (res2$log2FoldChange > 1) & (res2$padj < 0.05)]
-  up3 <- rownames(res3)[!is.na(res3$log2FoldChange) & !is.na(res3$padj) & (res3$log2FoldChange > 1) & (res3$padj < 0.05)]
-  
-  down1 <- rownames(res1)[!is.na(res1$log2FoldChange) & !is.na(res1$padj) & (res1$log2FoldChange < -1) & (res1$padj < 0.05)]
-  down2 <- rownames(res2)[!is.na(res2$log2FoldChange) & !is.na(res2$padj) & (res2$log2FoldChange < -1) & (res2$padj < 0.05)]
-  down3 <- rownames(res3)[!is.na(res3$log2FoldChange) & !is.na(res3$padj) & (res3$log2FoldChange < -1) & (res3$padj < 0.05)]
-  
-  # Interseção e exclusividade
-  up_intersect_all <- Reduce(intersect, list(up1, up2, up3))
-  up_only1 <- setdiff(up1, union(up2, up3))
-  up_only2 <- setdiff(up2, union(up1, up3))
-  up_only3 <- setdiff(up3, union(up1, up2))
-  
-  down_intersect_all <- Reduce(intersect, list(down1, down2, down3))
-  down_only1 <- setdiff(down1, union(down2, down3))
-  down_only2 <- setdiff(down2, union(down1, down3))
-  down_only3 <- setdiff(down3, union(down1, down2))
-  
-  # # Criando diagramas de Venn
-  venn_up <- venn.diagram(
-    x = list(Comp1 = up1, Comp2 = up2, Comp3 = up3),
-    category.names = c(comparison1, comparison2, comparison3),
-    filename = paste0(output_prefix, "_Venn_Up.jpeg"),
-    output = TRUE,
-    fill = c("red", "blue", "green"),
-    alpha = 0.5,
-    cex = 1.5,
-    cat.cex = 0.8,
-    # cat.pos = c(-30, 30, 0),
-    # cat.dist = c(0.05, 0.05, 0.05)
-  )
-
-  venn_down <- venn.diagram(
-    x = list(Comp1 = down1, Comp2 = down2, Comp3 = down3),
-    category.names = c(comparison1, comparison2, comparison3),
-    filename = paste0(output_prefix, "_Venn_Down.jpeg"),
-    output = TRUE,
-    fill = c("red", "blue", "green"),
-    alpha = 0.5,
-    cex = 1.5,
-    cat.cex = 0.8,
-    # cat.pos = c(-30, 30, 0),
-    # cat.dist = c(0.05, 0.05, 0.05)
-  )
-
-  
-
-  
-  # Criando tabelas
-  wb <- createWorkbook()
-  
-  addWorksheet(wb, "Upregulated_Intersect_All")
-  addWorksheet(wb, "Upregulated_Only_Comp1")
-  addWorksheet(wb, "Upregulated_Only_Comp2")
-  addWorksheet(wb, "Upregulated_Only_Comp3")
-  addWorksheet(wb, "Downregulated_Intersect_All")
-  addWorksheet(wb, "Downregulated_Only_Comp1")
-  addWorksheet(wb, "Downregulated_Only_Comp2")
-  addWorksheet(wb, "Downregulated_Only_Comp3")
-  
-  writeData(wb, "Upregulated_Intersect_All", up_intersect_all)
-  writeData(wb, "Upregulated_Only_Comp1", up_only1)
-  writeData(wb, "Upregulated_Only_Comp2", up_only2)
-  writeData(wb, "Upregulated_Only_Comp3", up_only3)
-  writeData(wb, "Downregulated_Intersect_All", down_intersect_all)
-  writeData(wb, "Downregulated_Only_Comp1", down_only1)
-  writeData(wb, "Downregulated_Only_Comp2", down_only2)
-  writeData(wb, "Downregulated_Only_Comp3", down_only3)
-  
-  saveWorkbook(wb, paste0(output_prefix, "_VennData.xlsx"), overwrite = TRUE)
-  
-  message("Diagramas de Venn e tabelas gerados com sucesso!")
-}
-
-get_gene_info <- function(gene_list) {
-  data.frame(
-    Entrez_ID = gene_list,
-    Gene_Name = convert_entrez_to_symbol(gene_list) # Certifique-se de que essa função está definida
-  )
-}
-
-run_venn_analysis_three <- function(dds1, dds2, dds3, comparison1, comparison2, comparison3, output_prefix) {
-  # Extrai os resultados e converte para data.frame
-  res1 <- as.data.frame(results(dds1))
-  res2 <- as.data.frame(results(dds2))
-  res3 <- as.data.frame(results(dds3))
-  
-  # Filtra genes upregulados e downregulados
-  up1 <- rownames(res1)[!is.na(res1$log2FoldChange) & !is.na(res1$padj) & (res1$log2FoldChange > 1) & (res1$padj < 0.05)]
-  up2 <- rownames(res2)[!is.na(res2$log2FoldChange) & !is.na(res2$padj) & (res2$log2FoldChange > 1) & (res2$padj < 0.05)]
-  up3 <- rownames(res3)[!is.na(res3$log2FoldChange) & !is.na(res3$padj) & (res3$log2FoldChange > 1) & (res3$padj < 0.05)]
-  
-  down1 <- rownames(res1)[!is.na(res1$log2FoldChange) & !is.na(res1$padj) & (res1$log2FoldChange < -1) & (res1$padj < 0.05)]
-  down2 <- rownames(res2)[!is.na(res2$log2FoldChange) & !is.na(res2$padj) & (res2$log2FoldChange < -1) & (res2$padj < 0.05)]
-  down3 <- rownames(res3)[!is.na(res3$log2FoldChange) & !is.na(res3$padj) & (res3$log2FoldChange < -1) & (res3$padj < 0.05)]
-  
-  # Interseção e exclusividade
-  up_intersect_all <- Reduce(intersect, list(up1, up2, up3))
-  up_only1 <- setdiff(up1, union(up2, up3))
-  up_only2 <- setdiff(up2, union(up1, up3))
-  up_only3 <- setdiff(up3, union(up1, up2))
-  
-  down_intersect_all <- Reduce(intersect, list(down1, down2, down3))
-  down_only1 <- setdiff(down1, union(down2, down3))
-  down_only2 <- setdiff(down2, union(down1, down3))
-  down_only3 <- setdiff(down3, union(down1, down2))
-  
-  # Criando diagramas de Venn
-  venn_up <- venn.diagram(
-    x = list(Comp1 = up1, Comp2 = up2, Comp3 = up3),
-    category.names = c(comparison1, comparison2, comparison3),
-    filename = paste0(output_prefix, "_Venn_Up.jpeg"),
-    output = TRUE,
-    fill = c("red", "blue", "green"),
-    alpha = 0.5,
-    cex = 1.5,
-    cat.cex = 0.8,
-    # cat.pos = c(-30, 30, 0),
-    # cat.dist = c(0.05, 0.05, 0.05)
-  )
-  
-  venn_down <- venn.diagram(
-    x = list(Comp1 = down1, Comp2 = down2, Comp3 = down3),
-    category.names = c(comparison1, comparison2, comparison3),
-    filename = paste0(output_prefix, "_Venn_Down.jpeg"),
-    output = TRUE,
-    fill = c("red", "blue", "green"),
-    alpha = 0.5,
-    cex = 1.5,
-    cat.cex = 0.8,
-    # cat.pos = c(-30, 30, 0),
-    # cat.dist = c(0.05, 0.05, 0.05)
-  )
-  
-  # Criando tabelas com nomes dos genes
-  wb <- createWorkbook()
-  
-  addWorksheet(wb, "Upregulated_Intersect_All")
-  addWorksheet(wb, "Upregulated_Only_Comp1")
-  addWorksheet(wb, "Upregulated_Only_Comp2")
-  addWorksheet(wb, "Upregulated_Only_Comp3")
-  addWorksheet(wb, "Downregulated_Intersect_All")
-  addWorksheet(wb, "Downregulated_Only_Comp1")
-  addWorksheet(wb, "Downregulated_Only_Comp2")
-  addWorksheet(wb, "Downregulated_Only_Comp3")
-  
-  writeData(wb, "Upregulated_Intersect_All", get_gene_info(up_intersect_all))
-  writeData(wb, "Upregulated_Only_Comp1", get_gene_info(up_only1))
-  writeData(wb, "Upregulated_Only_Comp2", get_gene_info(up_only2))
-  writeData(wb, "Upregulated_Only_Comp3", get_gene_info(up_only3))
-  writeData(wb, "Downregulated_Intersect_All", get_gene_info(down_intersect_all))
-  writeData(wb, "Downregulated_Only_Comp1", get_gene_info(down_only1))
-  writeData(wb, "Downregulated_Only_Comp2", get_gene_info(down_only2))
-  writeData(wb, "Downregulated_Only_Comp3", get_gene_info(down_only3))
-  
-  saveWorkbook(wb, paste0(output_prefix, "_VennData.xlsx"), overwrite = TRUE)
-  
-  message("Diagramas de Venn e tabelas gerados com sucesso!")
-}
-
-
-
 ###########################################
 # 5. Execução das análises
 ###########################################
 
-intersect(phenoData$SampleName[phenoData$Treatment %in% c("Health", "Lama_Chronic_Infection")], colnames(data))
+intersect(phenoData$SampleName[phenoData$Treatment %in% c("Cutaneous", "Mucosal")], colnames(data))
 colnames(data)
 phenoData
 
 
-
 # Executa DESeq2 para as comparações desejadas
-Health_vs_Chronic_Inf <- run_deseq_analysis(data, phenoData, "Health", "Lama_Chronic_Infection",
-                                            file.path(results_dir, "DESeq2_Health_vs_Chronic_Inf.tabular"))
+dds_nf_ilp <- run_deseq_analysis(data, phenoData, "Cutaneous", "Mucosal",
+                                 file.path(results_dir, "DESeq2_Cutaneous_vs_Infected.tabular"))
 # 
-Health_vs_Early_Inf <- run_deseq_analysis(data, phenoData, "Health", "Lama_Early_Infection",
-                                          file.path(results_dir, "DESeq2_Health_vs_Early_Inf.tabular"))
+# dds_nf_ifp <- run_deseq_analysis(data, phenoData, "Non-Infected", "Infected_Fixed_Parasites",
+#                                  "./Deseq2/SRP377060 - Leishmania/results/DESeq2_NonInfected_vs_InfectedFixed.tabular")
 
-Health_vs_Late_Inf <- run_deseq_analysis(data, phenoData, "Health", "Lama_Late_Infection",
-                                          file.path(results_dir, "DESeq2_Health_vs_Late_Inf.tabular"))
+# Visualiza as contagens (primeiras linhas) dos objetos DESeqDataSet
+head(assay(dds_nf_ilp))
+# head(assay(dds_nf_ifp))
 
+# Executa e salva os gráficos de PCA
+pca_nf_ilp <- run_pca_analysis(dds_nf_ilp, file.path(results_dir, "PCA_Cutaneous_vs_Mucosal.jpeg"))
+# pca_nf_ifp <- run_pca_analysis(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/PCA_NonInfected_vs_InfectedFixed.jpeg")
 
-head(assay(Health_vs_Chronic_Inf))
-head(assay(Health_vs_Early_Inf))
-head(assay(Health_vs_Late_Inf))
+# Executa e salva os mapas de distância entre amostras
+run_sample_distances(dds_nf_ilp, file.path(results_dir, "SampleDistances_Cutaneous_vs_Mucosal.jpeg"))
+# run_sample_distances(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/SampleDistances_NonInfected_vs_InfectedFixed.jpeg")
 
-pca_Health_vs_Chronic_Inf <- run_pca_analysis(Health_vs_Chronic_Inf, file.path(results_dir, "PCA_Health_vs_Chronic_Inf.jpeg"))
-pca_Health_vs_Early_Inf <- run_pca_analysis(Health_vs_Early_Inf, file.path(results_dir, "PCA_Health_vs_Early_Inf.jpeg"))
-pca_Health_vs_Late_Inf <- run_pca_analysis(Health_vs_Late_Inf, file.path(results_dir, "PCA_Health_vs_Late_Inf.jpeg"))
+# Executa e salva os gráficos de Dispersion, Histograma de p-values e MA-plot
+run_dispersion_plot(dds_nf_ilp, file.path(results_dir, "Dispersion_Cutaneous_vs_Mucosal.jpeg"))
+# run_dispersion_plot(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/Dispersion_NonInfected_vs_InfectedFixed.jpeg")
 
+run_pval_histogram(dds_nf_ilp, file.path(results_dir, "Histogram_pvalues_Cutaneous_vs_Mucosal.jpeg"))
+# run_pval_histogram(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/Histogram_pvalues_NonInfected_vs_InfectedFixed.jpeg")
 
-run_sample_distances(Health_vs_Chronic_Inf, file.path(results_dir, "SampleDistances_Health_vs_Chronic_Inf.jpeg"))
-run_sample_distances(Health_vs_Early_Inf, file.path(results_dir, "SampleDistances_Health_vs_Early_Inf.jpeg"))
-run_sample_distances(Health_vs_Late_Inf, file.path(results_dir, "SampleDistances_Health_vs_Late_Inf.jpeg"))
-
-
-run_dispersion_plot(Health_vs_Chronic_Inf, file.path(results_dir, "Dispersion_Health_vs_Chronic_Inf.jpeg"))
-run_dispersion_plot(Health_vs_Early_Inf, file.path(results_dir, "Dispersion_Health_vs_Early_Inf.jpeg"))
-run_dispersion_plot(Health_vs_Late_Inf, file.path(results_dir, "Dispersion_Health_vs_Late_Inf.jpeg"))
-
-
-run_pval_histogram(Health_vs_Chronic_Inf, file.path(results_dir, "Histogram_pvalues_Health_vs_Chronic_Inf.jpeg"))
-run_pval_histogram(Health_vs_Early_Inf, file.path(results_dir, "Histogram_pvalues_Health_vs_Early_Inf.jpeg"))
-run_pval_histogram(Health_vs_Late_Inf, file.path(results_dir, "Histogram_pvalues_Health_vs_Late_Inf.jpeg"))
-
-ma1 = run_ma_plot(Health_vs_Chronic_Inf, file.path(results_dir, "MAplot_Health_vs_Chronic_Inf.jpeg"))
-ma2 = run_ma_plot(Health_vs_Early_Inf, file.path(results_dir, "MAplot_Health_vs_Early_Inf.jpeg"))
-ma3 = run_ma_plot(Health_vs_Late_Inf, file.path(results_dir, "MAplot_Health_vs_Late_Inf.jpeg"))
-
+ma1 = run_ma_plot(dds_nf_ilp, file.path(results_dir, "MAplot_Cutaneous_vs_Mucosal.jpeg"))
+# ma2 = run_ma_plot(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/MAplot_NonInfected_vs_InfectedFixed.jpeg")
 head(ma1$data)
-head(ma2$data)
-head(ma3$data)
 
-run_volcano_plot(Health_vs_Chronic_Inf, file.path(results_dir, "Volcano_Health_vs_Chronic_Inf.jpeg"))
-run_volcano_plot(Health_vs_Early_Inf, file.path(results_dir, "Volcano_Health_vs_Early_Inf.jpeg"))
-run_volcano_plot(Health_vs_Late_Inf, file.path(results_dir, "Volcano_Health_vs_Late_Inf.jpeg"))
+# Executa e salva os Volcano Plots
+run_volcano_plot(dds_nf_ilp, file.path(results_dir, "Volcano_Cutaneous_vs_Mucosal.jpeg"))
+# run_volcano_plot(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/Volcano_NonInfected_vs_InfectedFixed.jpeg")
+
+# a= run_volcano_plot(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/Volcano_NonInfected_vs_InfectedFixed.jpeg")
+# head(a$data)
 
 
 
-# run_venn_analysis(Health_vs_Chronic_Inf, Health_vs_Early_Inf, 
+# run_venn_analysis(dds_nf_ilp, dds_nf_ifp, 
 #                   "NonInfected_vs_InfectedLive", "NonInfected_vs_InfectedFixed",
 #                   "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis")
 # 
-
-
-# Executando a análise de Venn com as três comparações
-run_venn_analysis_three(Health_vs_Chronic_Inf, Health_vs_Early_Inf, Health_vs_Late_Inf,
-                        "Health vs Chronic", "Health vs Early", "Health vs Late", file.path(results_dir, "Venn_3Comparisons"))
-
 
 ############################
 
@@ -734,7 +476,7 @@ detect_organism <- function(entrez_ids) {
 }
 
 # Define o arquivo de entrada (o Excel com as abas de Venn)
-input_file <- "./Deseq2/SRP069976 - Leishmania/results/Venn_3Comparisons_VennData.xlsx"
+input_file <- "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis_VennData.xlsx"
 
 # Obter os nomes das abas no arquivo Excel
 sheet_names <- getSheetNames(input_file)
@@ -780,11 +522,11 @@ for(sheet in sheet_names) {
   }
   
   # Salva a tabela de enriquecimento em um arquivo Excel
-  output_excel <- paste0("./Deseq2/SRP069976 - Leishmania/results/Enrichment_", sheet, ".xlsx")
+  output_excel <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".xlsx")
   write.xlsx(as.data.frame(ego), file = output_excel, overwrite = TRUE)
   
   # Gera e salva um dotplot (como PDF) para visualização
-  output_pdf <- paste0("./Deseq2/SRP069976 - Leishmania/results/Enrichment_", sheet, ".pdf")
+  output_pdf <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".pdf")
   pdf(output_pdf, width = 10, height = 8)
   print(dotplot(ego, showCategory = 20) + ggtitle(paste("GO Enrichment for", sheet)))
   dev.off()
@@ -903,8 +645,8 @@ run_deseq_up_down_enrichment <- function(dds,
 }
 
 # Exemplo de uso:
-# Supondo que 'Health_vs_Chronic_Inf' seja o objeto DESeq2 resultante da comparação desejada.
-up_down_enrich_results <- run_deseq_up_down_enrichment(dds = Health_vs_Chronic_Inf,
+# Supondo que 'dds_nf_ilp' seja o objeto DESeq2 resultante da comparação desejada.
+up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_nf_ilp,
                                                        up_threshold = 1,
                                                        down_threshold = -1,
                                                        padj_cutoff = 0.05,
@@ -962,7 +704,7 @@ run_deseq_up_down_analysis <- function(dds, up_threshold, down_threshold, padj_c
   return(list(up = up_genes, down = down_genes))
 }
 
-up_down_enrich_results <- run_deseq_up_down_enrichment(dds = Health_vs_Chronic_Inf,
+up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_nf_ilp,
                                                        up_threshold = 1,
                                                        down_threshold = -1,
                                                        padj_cutoff = 0.05,
@@ -971,7 +713,6 @@ up_down_enrich_results <- run_deseq_up_down_enrichment(dds = Health_vs_Chronic_I
                                                        pvalueCutoff = 0.05,
                                                        qvalueCutoff = 0.2,
                                                        output_file_prefix = file.path(results_dir, "DESeq2_UpDown"))
-
 
 
 

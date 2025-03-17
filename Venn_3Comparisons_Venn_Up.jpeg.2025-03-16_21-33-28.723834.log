@@ -1,0 +1,18 @@
+INFO [2025-03-16 21:33:28] $x
+INFO [2025-03-16 21:33:28] list(comp1 = genes1$up, comp2 = genes2$up, comp3 = genes3$up)
+INFO [2025-03-16 21:33:28] 
+INFO [2025-03-16 21:33:28] $category.names
+INFO [2025-03-16 21:33:28] c(comp1, comp2, comp3)
+INFO [2025-03-16 21:33:28] 
+INFO [2025-03-16 21:33:28] $filename
+INFO [2025-03-16 21:33:28] paste0(output_prefix, "_Venn_Up.jpeg")
+INFO [2025-03-16 21:33:28] 
+INFO [2025-03-16 21:33:28] $fill
+INFO [2025-03-16 21:33:28] c("red", "blue", "green")
+INFO [2025-03-16 21:33:28] 
+INFO [2025-03-16 21:33:28] $alpha
+INFO [2025-03-16 21:33:28] [1] 0.5
+INFO [2025-03-16 21:33:28] 
+INFO [2025-03-16 21:33:28] $cex
+INFO [2025-03-16 21:33:28] [1] 1.5
+INFO [2025-03-16 21:33:28] 
