@@ -34,7 +34,7 @@ samples_to_remove <- c("DC_Infected_Live_Parasites_3_SRR19400242",
 ###########################################
 # 1. Leitura e combinação dos arquivos tabulares
 ###########################################
-base_dir <- "Deseq2/GSE184104(Mus musculus) - Candida albicans/"
+base_dir <- "Deseq2/GSE163668(homo sapiens) - SARS-CoV-2/"
 results_dir <- file.path(base_dir, "results")
 
 tabular_dir <- base_dir
@@ -407,6 +407,10 @@ run_deseq_up_down_analysis <- function(dds, up_threshold, down_threshold, padj_c
 intersect(phenoData$SampleName[phenoData$Treatment %in% c("Control_Non-infected", "LPS")], colnames(data))
 colnames(data)
 phenoData
+
+
+
+
 
 # # Executa DESeq2 para as comparações desejadas
 dds_NonInfected_vs_24h <- run_deseq_analysis(

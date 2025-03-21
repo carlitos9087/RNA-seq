@@ -34,7 +34,7 @@ samples_to_remove <- c("DC_Infected_Live_Parasites_3_SRR19400242",
 ###########################################
 # 1. Leitura e combinação dos arquivos tabulares
 ###########################################
-base_dir <- "Deseq2/GSE184104(Mus musculus) - Candida albicans/"
+base_dir <- "Deseq2/GSE166253(homo sapiens) - SARS-CoV-2/"
 results_dir <- file.path(base_dir, "results")
 
 tabular_dir <- base_dir
@@ -68,7 +68,7 @@ print(colnames(data))
 # 2. Leitura dos dados fenotípicos (phenoData)
 ###########################################
 # Supondo que o arquivo Excel contenha as colunas "id", "SampleName" e "Treatment"
-phenoData <- read_excel("./Deseq2/GSE184104(Mus musculus) - Candida albicans/GSE184104.xlsx", col_names = TRUE)
+phenoData <- read_excel("./Deseq2/GSE166253(homo sapiens) - SARS-CoV-2/GSE166253.xlsx", col_names = TRUE)
 lista <- phenoData$id
 # phenoData <- phenoData[,-1]
 phenoData <- phenoData[,-1]# Remove a coluna "id"
@@ -404,99 +404,54 @@ run_deseq_up_down_analysis <- function(dds, up_threshold, down_threshold, padj_c
 # 5. Execução das análises
 ###########################################
 
-intersect(phenoData$SampleName[phenoData$Treatment %in% c("Control_Non-infected", "LPS")], colnames(data))
+intersect(phenoData$SampleName[phenoData$Treatment %in% c("healthy", "convalescent")], colnames(data))
 colnames(data)
 phenoData
 
-# # Executa DESeq2 para as comparações desejadas
-dds_NonInfected_vs_24h <- run_deseq_analysis(
+# Executa DESeq2 para a comparação healthy vs convalescent
+dds_Healthy_vs_Convalescent <- run_deseq_analysis(
   data, phenoData, 
-  "non-infected",                  # Grupo controle
-  "PCA2-infected_24h",             # Grupo experimental (24h)
-  file.path(results_dir, "DESeq2_NonInfected_vs_PCA2_24h.tabular")
-)
-
-dds_NonInfected_vs_7h <- run_deseq_analysis(
-  data, phenoData, 
-  "non-infected",                  # Grupo controle
-  "PCA2-infected_7h",              # Grupo experimental (7h)
-  file.path(results_dir, "DESeq2_NonInfected_vs_PCA2_7h.tabular")
+  "healthy",          # Grupo controle
+  "convalescent",     # Grupo experimental (convalescentes)
+  file.path(results_dir, "DESeq2_Healthy_vs_Convalescent.tabular")
 )
 
 # Análises de PCA
-pca_NonInfected_vs_24h <- run_pca_analysis(
-  dds_NonInfected_vs_24h, 
-  file.path(results_dir, "PCA_NonInfected_vs_PCA2_24h.jpeg")
-)
-
-pca_NonInfected_vs_7h <- run_pca_analysis(
-  dds_NonInfected_vs_7h, 
-  file.path(results_dir, "PCA_NonInfected_vs_PCA2_7h.jpeg")
+pca_Healthy_vs_Convalescent <- run_pca_analysis(
+  dds_Healthy_vs_Convalescent, 
+  file.path(results_dir, "PCA_Healthy_vs_Convalescent.jpeg")
 )
 
 # Distâncias entre amostras
 run_sample_distances(
-  dds_NonInfected_vs_24h, 
-  file.path(results_dir, "SampleDistances_NonInfected_vs_PCA2_24h.jpeg")
-)
-
-run_sample_distances(
-  dds_NonInfected_vs_7h, 
-  file.path(results_dir, "SampleDistances_NonInfected_vs_PCA2_7h.jpeg")
+  dds_Healthy_vs_Convalescent, 
+  file.path(results_dir, "SampleDistances_Healthy_vs_Convalescent.jpeg")
 )
 
 # Gráficos de dispersão
 run_dispersion_plot(
-  dds_NonInfected_vs_24h, 
-  file.path(results_dir, "Dispersion_NonInfected_vs_PCA2_24h.jpeg")
-)
-
-run_dispersion_plot(
-  dds_NonInfected_vs_7h, 
-  file.path(results_dir, "Dispersion_NonInfected_vs_PCA2_7h.jpeg")
+  dds_Healthy_vs_Convalescent, 
+  file.path(results_dir, "Dispersion_Healthy_vs_Convalescent.jpeg")
 )
 
 # Histogramas de p-values
 run_pval_histogram(
-  dds_NonInfected_vs_24h, 
-  file.path(results_dir, "Histogram_pvalues_NonInfected_vs_PCA2_24h.jpeg")
+  dds_Healthy_vs_Convalescent, 
+  file.path(results_dir, "Histogram_pvalues_Healthy_vs_Convalescent.jpeg")
 )
 
-run_pval_histogram(
-  dds_NonInfected_vs_7h, 
-  file.path(results_dir, "Histogram_pvalues_NonInfected_vs_PCA2_7h.jpeg")
+# MA Plot
+ma_Healthy_vs_Convalescent <- run_ma_plot(
+  dds_Healthy_vs_Convalescent, 
+  file.path(results_dir, "MAplot_Healthy_vs_Convalescent.jpeg")
 )
 
-# MA Plots
-ma_NonInfected_vs_24h <- run_ma_plot(
-  dds_NonInfected_vs_24h, 
-  file.path(results_dir, "MAplot_NonInfected_vs_PCA2_24h.jpeg")
-)
-
-ma_NonInfected_vs_7h <- run_ma_plot(
-  dds_NonInfected_vs_7h, 
-  file.path(results_dir, "MAplot_NonInfected_vs_PCA2_7h.jpeg")
-)
-
-# Volcano Plots
+# Volcano Plot
 run_volcano_plot(
-  dds_NonInfected_vs_24h, 
-  file.path(results_dir, "Volcano_NonInfected_vs_PCA2_24h.jpeg")
+  dds_Healthy_vs_Convalescent, 
+  file.path(results_dir, "Volcano_Healthy_vs_Convalescent.jpeg")
 )
 
-run_volcano_plot(
-  dds_NonInfected_vs_7h, 
-  file.path(results_dir, "Volcano_NonInfected_vs_PCA2_7h.jpeg")
-)
-
-# Análise de Venn (comparando as duas condições infectadas)
-run_venn_analysis(
-  dds_NonInfected_vs_24h, 
-  dds_NonInfected_vs_7h,
-  "NonInfected_vs_PCA2_24h", 
-  "NonInfected_vs_PCA2_7h",
-  file.path(results_dir, "Venn_NonInfected_vs_24h_vs_7h")
-)
 
 ############################
 
@@ -750,9 +705,7 @@ run_deseq_up_down_analysis <- function(dds, up_threshold, down_threshold, padj_c
   return(list(up = up_genes, down = down_genes))
 }
 
-
-
-up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_NonInfected_vs_24h,
+up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_Healthy_vs_Convalescent,
                                                        up_threshold = 1,
                                                        down_threshold = -1,
                                                        padj_cutoff = 0.05,
@@ -760,15 +713,8 @@ up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_NonInfected_vs_
                                                        pAdjustMethod = "BH",
                                                        pvalueCutoff = 0.05,
                                                        qvalueCutoff = 0.2,
-                                                       output_file_prefix = file.path(results_dir, "DESeq2_UpDown_NonInfected_vs_PCA2_24h"))
+                                                       output_file_prefix = file.path(results_dir, "DESeq2_UpDown_Healthy_vs_Convalescent"))
 
-up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_NonInfected_vs_7h,
-                                                       up_threshold = 1,
-                                                       down_threshold = -1,
-                                                       padj_cutoff = 0.05,
-                                                       ont = "BP",
-                                                       pAdjustMethod = "BH",
-                                                       pvalueCutoff = 0.05,
-                                                       qvalueCutoff = 0.2,
-                                                       output_file_prefix = file.path(results_dir, "DESeq2_UpDown_NonInfected_vs_PCA2_7h"))
+
+
 
