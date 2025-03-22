@@ -1,0 +1,33 @@
+Efeito do Treinamento com Beta-glucano:
+
+Comparar macrófagos treinados (BG) vs. não treinados (RPMI) na ausência de Mtb:
+
+BG_RPMI vs. RPMI_RPMI.
+
+Objetivo: Identificar genes diferencialmente expressos (DEGs) devido ao treinamento com beta-glucano.
+
+Efeito da Exposição ao Mtb:
+
+Comparar macrófagos expostos ao Mtb vs. não expostos ao Mtb, independentemente do treinamento:
+
+BG_MTB vs. BG_RPMI (efeito do Mtb em macrófagos treinados).
+
+RPMI_MTB vs. RPMI_RPMI (efeito do Mtb em macrófagos não treinados).
+
+Objetivo: Identificar DEGs associados à resposta ao Mtb.
+
+Interação entre Treinamento e Resposta ao Mtb:
+
+Comparar o efeito do Mtb em macrófagos treinados vs. não treinados:
+
+(BG_MTB vs. BG_RPMI) vs. (RPMI_MTB vs. RPMI_RPMI).
+
+Objetivo: Identificar genes cuja resposta ao Mtb é modulada pelo treinamento com beta-glucano.
+
+Efeito Global do Treinamento na Resposta ao Mtb:
+
+Comparar macrófagos treinados e expostos ao Mtb vs. macrófagos não treinados e expostos ao Mtb:
+
+BG_MTB vs. RPMI_MTB.
+
+Objetivo: Identificar DEGs que refletem a diferença na resposta ao Mtb entre macrófagos treinados e não treinados.
