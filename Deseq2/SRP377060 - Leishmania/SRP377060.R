@@ -180,8 +180,77 @@ convert_entrez_to_symbol <- function(entrez_ids) {
   return(gene_symbols)
 }
 
+# run_volcano_plot <- function(dds, output_file, pval_threshold = 0.05, log2fc_threshold = 1) {
+#   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
+#   
+#   res <- results(dds)
+#   res_df <- na.omit(as.data.frame(res))
+#   res_df$GeneID <- rownames(res_df)  # Mantém os IDs Entrez
+#   
+#   # Converte IDs Entrez para símbolos de genes
+#   res_df$Gene <- convert_entrez_to_symbol(res_df$GeneID)
+#   
+#   res_df$Significance <- "Not Significant"
+#   res_df$Significance[res_df$pvalue < pval_threshold & abs(res_df$log2FoldChange) >= log2fc_threshold] <- "Significant"
+#   res_df$Color <- ifelse(res_df$Significance == "Significant", ifelse(res_df$log2FoldChange > 0, "red", "blue"), "grey")
+#   
+#   write.xlsx(res_df, file = sub(".jpeg", ".xlsx", output_file), rowNames = FALSE)
+#   
+#   top_genes <- res_df[res_df$Significance == "Significant" & res_df$pvalue < 0.01, ]
+#   
+#   p <- ggplot(res_df, aes(x = log2FoldChange, y = -log10(pvalue), color = Color, label = Gene)) +
+#     geom_point(alpha = 0.7, size = 2) +
+#     scale_color_manual(values = c("red" = "red", "blue" = "blue", "grey" = "grey")) +
+#     geom_hline(yintercept = -log10(pval_threshold), linetype = "dashed", color = "black") +
+#     geom_vline(xintercept = c(-log2fc_threshold, log2fc_threshold), linetype = "dashed", color = "black") +
+#     xlab("Log2 Fold Change") +
+#     ylab("-Log10 P-value") +
+#     ggtitle("Volcano Plot") +
+#     theme_minimal() +
+#     theme(legend.position = "none") +
+#     geom_text_repel(data = top_genes, aes(label = Gene), size = 3, max.overlaps = 10)
+#   
+#   ggsave(output_file, p, width = 8, height = 6, dpi = 300)
+#   return(p)
+# }
+# 
+# run_ma_plot <- function(dds, output_file) {
+#   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
+#   
+#   res <- results(dds)
+#   res_df <- as.data.frame(res)
+#   res_df$GeneID <- rownames(res_df)  # Mantém os IDs Entrez
+#   
+#   # Converte IDs Entrez para símbolos de genes
+#   res_df$Gene <- convert_entrez_to_symbol(res_df$GeneID)
+#   
+#   res_df$Significance <- "Not Significant"
+#   res_df$Significance[res_df$padj < 0.05] <- "Significant"
+#   res_df$Color <- "grey"
+#   res_df$Color[res_df$padj < 0.05 & res_df$log2FoldChange > 0] <- "red"
+#   res_df$Color[res_df$padj < 0.05 & res_df$log2FoldChange < 0] <- "blue"
+#   
+#   write.xlsx(res_df, file = sub(".jpeg", ".xlsx", output_file), rowNames = FALSE)
+#   
+#   top_genes <- res_df[abs(res_df$log2FoldChange) > 2 & res_df$padj < 0.05, ]
+#   
+#   p <- ggplot(res_df, aes(x = log10(baseMean), y = log2FoldChange, color = Color, label = Gene)) +
+#     geom_point(alpha = 0.7, size = 2) +
+#     scale_color_manual(values = c("red" = "red", "blue" = "blue", "grey" = "grey")) +
+#     geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+#     xlab("Log10 Mean Expression") +
+#     ylab("Log2 Fold Change") +
+#     ggtitle("MA-plot") +
+#     theme_minimal() +
+#     theme(legend.position = "none") +
+#     geom_text_repel(data = top_genes, aes(label = Gene), size = 3, max.overlaps = 10)
+#   
+#   ggsave(output_file, p, width = 8, height = 6, dpi = 300)
+#   return(p)
+# }
 
-run_volcano_plot <- function(dds, output_file, pval_threshold = 0.05, log2fc_threshold = 1) {
+# 1. Volcano Plot usando padj (FDR) em vez de pvalue bruto
+run_volcano_plot <- function(dds, output_file, padj_threshold = 0.05, log2fc_threshold = 1) {
   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
   
   res <- results(dds)
@@ -191,22 +260,31 @@ run_volcano_plot <- function(dds, output_file, pval_threshold = 0.05, log2fc_thr
   # Converte IDs Entrez para símbolos de genes
   res_df$Gene <- convert_entrez_to_symbol(res_df$GeneID)
   
+  # Define significância baseada em FDR e magnitude de FC
   res_df$Significance <- "Not Significant"
-  res_df$Significance[res_df$pvalue < pval_threshold & abs(res_df$log2FoldChange) >= log2fc_threshold] <- "Significant"
-  res_df$Color <- ifelse(res_df$Significance == "Significant", ifelse(res_df$log2FoldChange > 0, "red", "blue"), "grey")
+  sig_idx <- res_df$padj < padj_threshold & abs(res_df$log2FoldChange) >= log2fc_threshold
+  res_df$Significance[sig_idx] <- "Significant"
   
-  write.xlsx(res_df, file = sub(".jpeg", ".xlsx", output_file), rowNames = FALSE)
+  # Define cores
+  res_df$Color <- "grey"
+  res_df$Color[res_df$Significance == "Significant" & res_df$log2FoldChange > 0] <- "red"
+  res_df$Color[res_df$Significance == "Significant" & res_df$log2FoldChange < 0] <- "blue"
   
-  top_genes <- res_df[res_df$Significance == "Significant" & res_df$pvalue < 0.01, ]
+  # Salva tabela com resultados e anotações
+  write.xlsx(res_df, file = sub("\\.jpeg$", ".xlsx", output_file), rowNames = FALSE)
   
-  p <- ggplot(res_df, aes(x = log2FoldChange, y = -log10(pvalue), color = Color, label = Gene)) +
+  # Seleciona top genes para rotular (mais rigoroso no FDR)
+  top_genes <- subset(res_df, padj < padj_threshold/10 & abs(log2FoldChange) >= log2fc_threshold)
+  
+  # Gera o gráfico
+  p <- ggplot(res_df, aes(x = log2FoldChange, y = -log10(padj), color = Color, label = Gene)) +
     geom_point(alpha = 0.7, size = 2) +
     scale_color_manual(values = c("red" = "red", "blue" = "blue", "grey" = "grey")) +
-    geom_hline(yintercept = -log10(pval_threshold), linetype = "dashed", color = "black") +
+    geom_hline(yintercept = -log10(padj_threshold), linetype = "dashed", color = "black") +
     geom_vline(xintercept = c(-log2fc_threshold, log2fc_threshold), linetype = "dashed", color = "black") +
     xlab("Log2 Fold Change") +
-    ylab("-Log10 P-value") +
-    ggtitle("Volcano Plot") +
+    ylab("-Log10 Adjusted P-value (FDR)") +
+    ggtitle("Volcano Plot (FDR + log2FC)") +
     theme_minimal() +
     theme(legend.position = "none") +
     geom_text_repel(data = top_genes, aes(label = Gene), size = 3, max.overlaps = 10)
@@ -215,33 +293,40 @@ run_volcano_plot <- function(dds, output_file, pval_threshold = 0.05, log2fc_thr
   return(p)
 }
 
-run_ma_plot <- function(dds, output_file) {
+
+# 2. MA-plot já utiliza padj, apenas ajustamos thresholds parametrizáveis
+run_ma_plot <- function(dds, output_file, padj_threshold = 0.05, log2fc_label = 2) {
   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
   
   res <- results(dds)
   res_df <- as.data.frame(res)
-  res_df$GeneID <- rownames(res_df)  # Mantém os IDs Entrez
+  res_df$GeneID <- rownames(res_df)
   
   # Converte IDs Entrez para símbolos de genes
   res_df$Gene <- convert_entrez_to_symbol(res_df$GeneID)
   
-  res_df$Significance <- "Not Significant"
-  res_df$Significance[res_df$padj < 0.05] <- "Significant"
+  # Define significância via FDR
+  res_df$Significance <- ifelse(res_df$padj < padj_threshold, "Significant", "Not Significant")
+  
+  # Define cores baseadas em direção da FC
   res_df$Color <- "grey"
-  res_df$Color[res_df$padj < 0.05 & res_df$log2FoldChange > 0] <- "red"
-  res_df$Color[res_df$padj < 0.05 & res_df$log2FoldChange < 0] <- "blue"
+  res_df$Color[res_df$padj < padj_threshold & res_df$log2FoldChange > 0] <- "red"
+  res_df$Color[res_df$padj < padj_threshold & res_df$log2FoldChange < 0] <- "blue"
   
-  write.xlsx(res_df, file = sub(".jpeg", ".xlsx", output_file), rowNames = FALSE)
+  # Salva tabela
+  write.xlsx(res_df, file = sub("\\.jpeg$", ".xlsx", output_file), rowNames = FALSE)
   
-  top_genes <- res_df[abs(res_df$log2FoldChange) > 2 & res_df$padj < 0.05, ]
+  # Genes para rotular: magnitude alta e FDR significativo
+  top_genes <- subset(res_df, padj < padj_threshold & abs(log2FoldChange) >= log2fc_label)
   
+  # Gera o MA-plot
   p <- ggplot(res_df, aes(x = log10(baseMean), y = log2FoldChange, color = Color, label = Gene)) +
     geom_point(alpha = 0.7, size = 2) +
     scale_color_manual(values = c("red" = "red", "blue" = "blue", "grey" = "grey")) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
     xlab("Log10 Mean Expression") +
     ylab("Log2 Fold Change") +
-    ggtitle("MA-plot") +
+    ggtitle("MA-plot (FDR + log2FC)") +
     theme_minimal() +
     theme(legend.position = "none") +
     geom_text_repel(data = top_genes, aes(label = Gene), size = 3, max.overlaps = 10)
@@ -605,14 +690,211 @@ run_deseq_up_down_enrichment <- function(dds,
 }
 
 # Exemplo de uso:
-# Supondo que 'dds_nf_ilp' seja o objeto DESeq2 resultante da comparação desejada.
-up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_nf_ilp,
-                                                       up_threshold = 1,
-                                                       down_threshold = -1,
-                                                       padj_cutoff = 0.05,
-                                                       ont = "BP",
-                                                       pAdjustMethod = "BH",
-                                                       pvalueCutoff = 0.05,
-                                                       qvalueCutoff = 0.2,
-                                                       output_file_prefix = "./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown")
+
+
+# Enriquecimento GO (BP & MF) com retorno em lista
+run_deseq_up_down_enrichment <- function(dds,
+                                         up_threshold   = 1,
+                                         down_threshold = -1,
+                                         padj_cutoff    = 0.05,
+                                         ontologies     = c("BP","MF"),
+                                         pAdjustMethod  = "BH",
+                                         pvalueCutoff   = 0.05,
+                                         qvalueCutoff   = 0.2,
+                                         output_prefix) {
+  
+  # (1) Extrai DEGs e mantém em memória
+  degs <- run_deseq_up_down_analysis(dds,
+                                     up_threshold   = up_threshold,
+                                     down_threshold = down_threshold,
+                                     padj_cutoff    = padj_cutoff,
+                                     output_file    = paste0(output_prefix, "_DEGs.xlsx"))
+  up_ids   <- na.omit(as.character(degs$up$Entrez_ID))
+  down_ids <- na.omit(as.character(degs$down$Entrez_ID))
+  
+  # Determina o OrgDb
+  orgDb <- select_orgDb(unique(c(up_ids, down_ids)))
+  
+  # Resultado em lista
+  enrich_results <- list()
+  
+  # Inicia workbook para salvar todos os resultados
+  wb <- createWorkbook()
+  
+  for(ont in ontologies) {
+    # up-regulated
+    ego_up <- enrichGO(gene          = up_ids,
+                       OrgDb         = orgDb,
+                       keyType       = "ENTREZID",
+                       ont           = ont,
+                       pAdjustMethod = pAdjustMethod,
+                       pvalueCutoff  = pvalueCutoff,
+                       qvalueCutoff  = qvalueCutoff,
+                       readable      = TRUE)
+    enrich_results[[paste0("up_", ont)]] <- ego_up
+    
+    sheet_up <- paste0("Up_", ont)
+    addWorksheet(wb, sheet_up)
+    writeData(wb, sheet_up, as.data.frame(ego_up))
+    pdf(paste0(output_prefix, "_", sheet_up, ".pdf"), width = 10, height = 8)
+    print(dotplot(ego_up, showCategory = 20) + ggtitle(paste("GO", ont, "Enrichment for Upregulated Genes")))
+    dev.off()
+    
+    # down-regulated
+    ego_down <- enrichGO(gene          = down_ids,
+                         OrgDb         = orgDb,
+                         keyType       = "ENTREZID",
+                         ont           = ont,
+                         pAdjustMethod = pAdjustMethod,
+                         pvalueCutoff  = pvalueCutoff,
+                         qvalueCutoff  = qvalueCutoff,
+                         readable      = TRUE)
+    enrich_results[[paste0("down_", ont)]] <- ego_down
+    
+    sheet_down <- paste0("Down_", ont)
+    addWorksheet(wb, sheet_down)
+    writeData(wb, sheet_down, as.data.frame(ego_down))
+    pdf(paste0(output_prefix, "_", sheet_down, ".pdf"), width = 10, height = 8)
+    print(dotplot(ego_down, showCategory = 20) + ggtitle(paste("GO", ont, "Enrichment for Downregulated Genes")))
+    dev.off()
+  }
+  
+  # Salva workbook com todas as abas
+  saveWorkbook(wb, paste0(output_prefix, "_Enrichment_GO.xlsx"), overwrite = TRUE)
+  message("GO enrichment (BP & MF) completed! Files saved with prefix: ", output_prefix)
+  
+  # Retorna lista com objetos enrichResult
+  return(enrich_results)
+}
+
+
+up_down_enrich_results <- run_deseq_up_down_enrichment(
+  dds             = dds_nf_ilp,
+  up_threshold    = 1,
+  down_threshold  = -1,
+  padj_cutoff     = 0.05,
+  ontologies      = c("BP","MF"),
+  pAdjustMethod   = "BH",
+  pvalueCutoff    = 0.05,
+  qvalueCutoff    = 0.2,
+  output_prefix   = "./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown"
+)
+
+# # Exemplo de uso:
+# # Supondo que 'dds_nf_ilp' seja o objeto DESeq2 resultante da comparação desejada.
+# up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_nf_ilp,
+#                                                        up_threshold = 1,
+#                                                        down_threshold = -1,
+#                                                        padj_cutoff = 0.05,
+#                                                        ont = "BP",
+#                                                        pAdjustMethod = "BH",
+#                                                        pvalueCutoff = 0.05,
+#                                                        qvalueCutoff = 0.2,
+#                                                        output_file_prefix = "./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown")
+# 
+
+
+
+
+# # Supondo que 'dds_nf_ilp' seja o objeto DESeq2 resultante da comparação desejada.
+# up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_nf_ilp,
+#                                                        up_threshold = 1,
+#                                                        down_threshold = -1,
+#                                                        padj_cutoff = 0.05,
+#                                                        ont = "BP",
+#                                                        pAdjustMethod = "BH",
+#                                                        pvalueCutoff = 0.05,
+#                                                        qvalueCutoff = 0.2,
+#                                                        output_file_prefix = "./Deseq2/SRP185421 - M tuberculosis/results/DESeq2_UpDown")
+
+head(up_down_enrich_results$down_MF)
+
+
+keywords <- c("acetyltransferase", "acetylation", "desacetylation",
+              "histone lysine","histone", 
+              "methyltransferase",
+              "deacetylase",
+              "histone deacetylase",
+              "lysine acetyltransferase",
+              "lysine")
+
+# monta uma regex que busca qualquer um deles (case insensitive)
+pattern  <- paste(keywords, collapse = "|")
+
+res_list <- up_down_enrich_results
+
+library(dplyr)
+filtered <- lapply(names(res_list), function(nm) {
+  df <- as.data.frame(res_list[[nm]])
+  df %>%
+    filter(grepl(pattern, Description, ignore.case = TRUE)) %>%
+    mutate(category = nm)
+})
+filtered_df <- bind_rows(filtered)
+filtered_df
+
+
+
+# library(openxlsx)
+# 
+# wb <- createWorkbook()
+# for(nm in unique(filtered_df$category)) {
+#   sheet_df <- filtered_df %>% filter(category == nm)
+#   addWorksheet(wb, nm)
+#   writeData(wb, nm, sheet_df)
+# }
+# saveWorkbook(wb, "./Deseq2/filtered_enrichment_keywords.xlsx", overwrite = TRUE)
+
+
+write.csv(filtered_df,
+          "./Deseq2/filtered_enrichment_keywords_all.csv",
+          row.names = FALSE)
+
+
+
+
+library(dplyr)
+library(openxlsx)
+
+# 1) lista de genes de interesse
+targets <- c("METTL14","ALKBH5","YTHDC2","ALKBH3","ALKBH1","ALKBH7",
+             "TET1","TRMT6","NML","RRP8","TRMT10C","TRMT61B","TRMT61A",
+             "NSUN2","TRDMT1","NAT10","ALYREF","YBX1","HAT1",
+             "KAT2A","KAT2B","KAT5","KAT6A","KAT6B","KAT7","KAT8","KAT12",
+             "GTF3C4","CREBBP","aTAT1","p300","HDAC1","HDAC2","HDAC3",
+             "HDAC4","HDAC5","HDAC6","HDAC7","HDAC8","HDAC9","HDAC10",
+             "SIRT1","SIRT2","SIRT3","SIRT4","SIRT5","SIRT6","SIRT7")
+
+# monta regex: palavra exata, ignorando case
+pattern_genes <- paste0("\\b(", paste(targets, collapse="|"), ")\\b")
+
+# 2) percorre cada categoria de enrichment, filtra pelo geneID
+filtered_by_gene <- lapply(names(up_down_enrich_results), function(cat) {
+  df <- as.data.frame(up_down_enrich_results[[cat]])
+  df %>%
+    # geneID é uma string do tipo "GeneA/GeneB/…"
+    filter(grepl(pattern_genes, geneID, ignore.case = TRUE)) %>%
+    mutate(category = cat)
+})
+
+# une em um só
+filtered_genes_df <- bind_rows(filtered_by_gene)
+
+# 3) salva em Excel, uma aba por categoria
+wb2 <- createWorkbook()
+for(cat in unique(filtered_genes_df$category)) {
+  sheet_df <- filtered_genes_df %>% filter(category == cat)
+  addWorksheet(wb2, cat)
+  writeData(wb2, cat, sheet_df)
+}
+saveWorkbook(wb2, "./Deseq2/SRP377060 - Leishmania/results/filtered_by_genes_enrichment.xlsx", overwrite = TRUE)
+
+# 4) opcional: salva um CSV único
+write.csv(filtered_genes_df,
+          "./Deseq2/SRP377060 - Leishmania/results/filtered_by_genes_enrichment_all.csv",
+          row.names = FALSE)
+
+# Em memória você fica com:
+#   filtered_genes_df        # todas as linhas que contêm algum gene alvo
+#   filtered_by_gene$up_BP   # etc., por categoria
 
