@@ -34,7 +34,7 @@ samples_to_remove <- c("DC_Infected_Live_Parasites_3_SRR19400242",
 ###########################################
 # 1. Leitura e combinação dos arquivos tabulares
 ###########################################
-tabular_dir  <- "Deseq2/SRP009251 - Leishmania/"
+tabular_dir  <- "Deseq2/SRP377060 - Leishmania/"
 tabular_files <- list.files(path = tabular_dir, pattern = "\\.tabular$", full.names = TRUE)
 
 read_tabular_file <- function(file) {
@@ -457,6 +457,7 @@ run_venn_analysis <- function(dds1, dds2, comparison1, comparison2, output_prefi
 # Executa DESeq2 para as comparações desejadas
 dds_nf_ilp <- run_deseq_analysis(data, phenoData, "Non-Infected", "Infected_Live_Parasites",
                                  "./Deseq2/SRP377060 - Leishmania/results/DESeq2_NonInfected_vs_InfectedLive.tabular")
+
 dds_nf_ifp <- run_deseq_analysis(data, phenoData, "Non-Infected", "Infected_Fixed_Parasites",
                                  "./Deseq2/SRP377060 - Leishmania/results/DESeq2_NonInfected_vs_InfectedFixed.tabular")
 
@@ -847,7 +848,7 @@ filtered_df
 
 
 write.csv(filtered_df,
-          "./Deseq2/filtered_enrichment_keywords_all.csv",
+          "./Deseq2/SRP377060 - Leishmania/results/filtered_enrichment_keywords_all.csv",
           row.names = FALSE)
 
 
@@ -887,7 +888,7 @@ for(cat in unique(filtered_genes_df$category)) {
   addWorksheet(wb2, cat)
   writeData(wb2, cat, sheet_df)
 }
-saveWorkbook(wb2, "./Deseq2/SRP377060 - Leishmania/results/filtered_by_genes_enrichment.xlsx", overwrite = TRUE)
+saveWorkbook(wb2, "./Deseq2/SRP377060 - Leishmania/results/filtered_by_genes_enrichment_targets.xlsx", overwrite = TRUE)
 
 # 4) opcional: salva um CSV único
 write.csv(filtered_genes_df,
@@ -897,4 +898,9 @@ write.csv(filtered_genes_df,
 # Em memória você fica com:
 #   filtered_genes_df        # todas as linhas que contêm algum gene alvo
 #   filtered_by_gene$up_BP   # etc., por categoria
+
+
+######################################################################################################################
+
+
 
