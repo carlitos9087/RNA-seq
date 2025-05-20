@@ -521,63 +521,117 @@ detect_organism <- function(entrez_ids) {
   }
 }
 
-# Define o arquivo de entrada (o Excel com as abas de Venn)
-input_file <- "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis_VennData.xlsx"
+# # Define o arquivo de entrada (o Excel com as abas de Venn)
+# input_file <- "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis_VennData.xlsx"
+# 
+# # Obter os nomes das abas no arquivo Excel
+# sheet_names <- getSheetNames(input_file)
+# 
+# # Loop por cada aba para realizar enriquecimento
+# for(sheet in sheet_names) {
+#   # Ler a aba
+#   gene_df <- read.xlsx(input_file, sheet = sheet)
+#   
+#   # Verifica se a coluna "Entrez_ID" existe
+#   if(!("Entrez_ID" %in% colnames(gene_df))) {
+#     stop("A coluna 'Entrez_ID' não foi encontrada na aba ", sheet)
+#   }
+#   
+#   # Pega a lista de IDs, removendo NAs ou strings vazias
+#   gene_list <- as.character(gene_df$Entrez_ID)
+#   gene_list <- gene_list[!is.na(gene_list) & gene_list != ""]
+#   
+#   # Detecta o organismo usando a função detect_organism
+#   organism <- tryCatch(detect_organism(gene_list), error = function(e) NA)
+#   if(is.na(organism)) {
+#     message("Nenhum organismo reconhecido para a aba ", sheet, ". Pulando enriquecimento.")
+#     next
+#   }
+#   
+#   # Seleciona o OrgDb com base no organismo detectado
+#   orgDb <- if(organism == "Homo sapiens") org.Hs.eg.db else org.Mm.eg.db
+#   
+#   # Executa enriquecimento GO para Biological Process (BP)
+#   ego <- enrichGO(gene         = gene_list,
+#                   OrgDb        = orgDb,
+#                   keyType      = "ENTREZID",
+#                   ont          = c("BP","MF"),
+#                   pAdjustMethod = "BH",
+#                   pvalueCutoff  = 0.05,
+#                   qvalueCutoff  = 0.2,
+#                   readable     = TRUE)
+#   
+#   # Se não houver genes mapeados, pula a aba
+#   if(is.null(ego) || nrow(as.data.frame(ego)) == 0) {
+#     message("Nenhum gene mapeado para enriquecimento na aba ", sheet, ". Pulando.")
+#     next
+#   }
+#   
+#   # Salva a tabela de enriquecimento em um arquivo Excel
+#   output_excel <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".xlsx")
+#   write.xlsx(as.data.frame(ego), file = output_excel, overwrite = TRUE)
+#   
+#   # Gera e salva um dotplot (como PDF) para visualização
+#   output_pdf <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".pdf")
+#   pdf(output_pdf, width = 10, height = 8)
+#   print(dotplot(ego, showCategory = 20) + ggtitle(paste("GO Enrichment for", sheet)))
+#   dev.off()
+#   
+#   message("Enrichment analysis for sheet '", sheet, "' completed!")
+# }
 
-# Obter os nomes das abas no arquivo Excel
+
+input_file <- "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis_VennData.xlsx"
 sheet_names <- getSheetNames(input_file)
 
-# Loop por cada aba para realizar enriquecimento
 for(sheet in sheet_names) {
-  # Ler a aba
   gene_df <- read.xlsx(input_file, sheet = sheet)
   
-  # Verifica se a coluna "Entrez_ID" existe
   if(!("Entrez_ID" %in% colnames(gene_df))) {
     stop("A coluna 'Entrez_ID' não foi encontrada na aba ", sheet)
   }
   
-  # Pega a lista de IDs, removendo NAs ou strings vazias
   gene_list <- as.character(gene_df$Entrez_ID)
   gene_list <- gene_list[!is.na(gene_list) & gene_list != ""]
   
-  # Detecta o organismo usando a função detect_organism
   organism <- tryCatch(detect_organism(gene_list), error = function(e) NA)
   if(is.na(organism)) {
     message("Nenhum organismo reconhecido para a aba ", sheet, ". Pulando enriquecimento.")
     next
   }
   
-  # Seleciona o OrgDb com base no organismo detectado
   orgDb <- if(organism == "Homo sapiens") org.Hs.eg.db else org.Mm.eg.db
   
-  # Executa enriquecimento GO para Biological Process (BP)
-  ego <- enrichGO(gene         = gene_list,
-                  OrgDb        = orgDb,
-                  keyType      = "ENTREZID",
-                  ont          = "BP",
-                  pAdjustMethod = "BH",
-                  pvalueCutoff  = 0.05,
-                  qvalueCutoff  = 0.2,
-                  readable     = TRUE)
-  
-  # Se não houver genes mapeados, pula a aba
-  if(is.null(ego) || nrow(as.data.frame(ego)) == 0) {
-    message("Nenhum gene mapeado para enriquecimento na aba ", sheet, ". Pulando.")
-    next
+  # Executa enriquecimento GO para BP e MF separadamente
+  for(ontology in c("BP", "MF")) {
+    ego <- enrichGO(
+      gene         = gene_list,
+      OrgDb        = orgDb,
+      keyType      = "ENTREZID",
+      ont          = ontology,
+      pAdjustMethod = "BH",
+      pvalueCutoff  = 0.05,
+      qvalueCutoff  = 0.2,
+      readable     = TRUE
+    )
+    
+    if(is.null(ego) || nrow(as.data.frame(ego)) == 0) {
+      message("Nenhum gene mapeado para GO:", ontology, " na aba ", sheet, ".")
+      next
+    }
+    
+    # Salva tabela Excel
+    output_excel <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, "_", ontology, ".xlsx")
+    write.xlsx(as.data.frame(ego), file = output_excel, overwrite = TRUE)
+    
+    # Salva dotplot
+    output_pdf <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, "_", ontology, ".pdf")
+    pdf(output_pdf, width = 10, height = 8)
+    print(dotplot(ego, showCategory = 20) + ggtitle(paste("GO:", ontology, "for", sheet)))
+    dev.off()
+    
+    message("Enrichment GO:", ontology, " para aba '", sheet, "' concluído!")
   }
-  
-  # Salva a tabela de enriquecimento em um arquivo Excel
-  output_excel <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".xlsx")
-  write.xlsx(as.data.frame(ego), file = output_excel, overwrite = TRUE)
-  
-  # Gera e salva um dotplot (como PDF) para visualização
-  output_pdf <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".pdf")
-  pdf(output_pdf, width = 10, height = 8)
-  print(dotplot(ego, showCategory = 20) + ggtitle(paste("GO Enrichment for", sheet)))
-  dev.off()
-  
-  message("Enrichment analysis for sheet '", sheet, "' completed!")
 }
 
 ######################################
@@ -616,79 +670,79 @@ select_orgDb <- function(gene_ids) {
   }
 }
 
-# Função principal para análise de enriquecimento
-run_deseq_up_down_enrichment <- function(dds, 
-                                         up_threshold = 1, 
-                                         down_threshold = -1, 
-                                         padj_cutoff = 0.05,
-                                         ont = "BP",
-                                         pAdjustMethod = "BH",
-                                         pvalueCutoff = 0.05,
-                                         qvalueCutoff = 0.2,
-                                         output_file_prefix) {
-  
-  # 1. Extrai DEGs e salva os resultados em Excel
-  deg_results <- run_deseq_up_down_analysis(dds, 
-                                            up_threshold = up_threshold, 
-                                            down_threshold = down_threshold, 
-                                            padj_cutoff = padj_cutoff,
-                                            output_file = paste0(output_file_prefix, "_DEGs.xlsx"))
-  
-  # Obtém os vetores de IDs (como caracteres) para up e down
-  up_ids <- as.character(deg_results$up$Entrez_ID)
-  down_ids <- as.character(deg_results$down$Entrez_ID)
-  
-  # Remove possíveis strings vazias
-  up_ids <- up_ids[up_ids != ""]
-  down_ids <- down_ids[down_ids != ""]
-  
-  # Determina o OrgDb a partir dos IDs
-  all_ids <- unique(c(up_ids, down_ids))
-  orgDb <- select_orgDb(all_ids)
-  
-  # 2. Realiza enriquecimento GO para os genes upregulados e downregulados
-  ego_up <- enrichGO(gene = up_ids,
-                     OrgDb = orgDb,
-                     keyType = "ENTREZID",
-                     ont = ont,
-                     pAdjustMethod = pAdjustMethod,
-                     pvalueCutoff = pvalueCutoff,
-                     qvalueCutoff = qvalueCutoff,
-                     readable = TRUE)
-  
-  ego_down <- enrichGO(gene = down_ids,
-                       OrgDb = orgDb,
-                       keyType = "ENTREZID",
-                       ont = ont,
-                       pAdjustMethod = pAdjustMethod,
-                       pvalueCutoff = pvalueCutoff,
-                       qvalueCutoff = qvalueCutoff,
-                       readable = TRUE)
-  
-  # 3. Salva os resultados de enriquecimento em uma planilha Excel com duas abas
-  wb <- createWorkbook()
-  addWorksheet(wb, "Up_Enrichment")
-  addWorksheet(wb, "Down_Enrichment")
-  writeData(wb, "Up_Enrichment", as.data.frame(ego_up))
-  writeData(wb, "Down_Enrichment", as.data.frame(ego_down))
-  saveWorkbook(wb, paste0(output_file_prefix, "_Enrichment.xlsx"), overwrite = TRUE)
-  
-  # 4. Gera e salva os dotplots de enriquecimento (PDF)
-  output_pdf_up <- paste0(output_file_prefix, "_Enrichment_Up.pdf")
-  output_pdf_down <- paste0(output_file_prefix, "_Enrichment_Down.pdf")
-  
-  pdf(output_pdf_up, width = 10, height = 8)
-  print(dotplot(ego_up, showCategory = 20) + ggtitle("GO Enrichment for Upregulated Genes"))
-  dev.off()
-  
-  pdf(output_pdf_down, width = 10, height = 8)
-  print(dotplot(ego_down, showCategory = 20) + ggtitle("GO Enrichment for Downregulated Genes"))
-  dev.off()
-  
-  message("Enrichment analysis for DEGs completed! Files saved with prefix: ", output_file_prefix)
-  
-  return(list(ego_up = ego_up, ego_down = ego_down))
-}
+# # Função principal para análise de enriquecimento
+# run_deseq_up_down_enrichment <- function(dds, 
+#                                          up_threshold = 1, 
+#                                          down_threshold = -1, 
+#                                          padj_cutoff = 0.05,
+#                                          ont = "BP",
+#                                          pAdjustMethod = "BH",
+#                                          pvalueCutoff = 0.05,
+#                                          qvalueCutoff = 0.2,
+#                                          output_file_prefix) {
+#   
+#   # 1. Extrai DEGs e salva os resultados em Excel
+#   deg_results <- run_deseq_up_down_analysis(dds, 
+#                                             up_threshold = up_threshold, 
+#                                             down_threshold = down_threshold, 
+#                                             padj_cutoff = padj_cutoff,
+#                                             output_file = paste0(output_file_prefix, "_DEGs.xlsx"))
+#   
+#   # Obtém os vetores de IDs (como caracteres) para up e down
+#   up_ids <- as.character(deg_results$up$Entrez_ID)
+#   down_ids <- as.character(deg_results$down$Entrez_ID)
+#   
+#   # Remove possíveis strings vazias
+#   up_ids <- up_ids[up_ids != ""]
+#   down_ids <- down_ids[down_ids != ""]
+#   
+#   # Determina o OrgDb a partir dos IDs
+#   all_ids <- unique(c(up_ids, down_ids))
+#   orgDb <- select_orgDb(all_ids)
+#   
+#   # 2. Realiza enriquecimento GO para os genes upregulados e downregulados
+#   ego_up <- enrichGO(gene = up_ids,
+#                      OrgDb = orgDb,
+#                      keyType = "ENTREZID",
+#                      ont = ont,
+#                      pAdjustMethod = pAdjustMethod,
+#                      pvalueCutoff = pvalueCutoff,
+#                      qvalueCutoff = qvalueCutoff,
+#                      readable = TRUE)
+#   
+#   ego_down <- enrichGO(gene = down_ids,
+#                        OrgDb = orgDb,
+#                        keyType = "ENTREZID",
+#                        ont = ont,
+#                        pAdjustMethod = pAdjustMethod,
+#                        pvalueCutoff = pvalueCutoff,
+#                        qvalueCutoff = qvalueCutoff,
+#                        readable = TRUE)
+#   
+#   # 3. Salva os resultados de enriquecimento em uma planilha Excel com duas abas
+#   wb <- createWorkbook()
+#   addWorksheet(wb, "Up_Enrichment")
+#   addWorksheet(wb, "Down_Enrichment")
+#   writeData(wb, "Up_Enrichment", as.data.frame(ego_up))
+#   writeData(wb, "Down_Enrichment", as.data.frame(ego_down))
+#   saveWorkbook(wb, paste0(output_file_prefix, "_Enrichment.xlsx"), overwrite = TRUE)
+#   
+#   # 4. Gera e salva os dotplots de enriquecimento (PDF)
+#   output_pdf_up <- paste0(output_file_prefix, "_Enrichment_Up.pdf")
+#   output_pdf_down <- paste0(output_file_prefix, "_Enrichment_Down.pdf")
+#   
+#   pdf(output_pdf_up, width = 10, height = 8)
+#   print(dotplot(ego_up, showCategory = 20) + ggtitle("GO Enrichment for Upregulated Genes"))
+#   dev.off()
+#   
+#   pdf(output_pdf_down, width = 10, height = 8)
+#   print(dotplot(ego_down, showCategory = 20) + ggtitle("GO Enrichment for Downregulated Genes"))
+#   dev.off()
+#   
+#   message("Enrichment analysis for DEGs completed! Files saved with prefix: ", output_file_prefix)
+#   
+#   return(list(ego_up = ego_up, ego_down = ego_down))
+# }
 
 # Exemplo de uso:
 
@@ -821,9 +875,9 @@ keywords <- c("acetyltransferase", "acetylation", "desacetylation",
 
 # monta uma regex que busca qualquer um deles (case insensitive)
 pattern  <- paste(keywords, collapse = "|")
-
+# 
 res_list <- up_down_enrich_results
-
+# 
 library(dplyr)
 filtered <- lapply(names(res_list), function(nm) {
   df <- as.data.frame(res_list[[nm]])
@@ -837,14 +891,14 @@ filtered_df
 
 
 # library(openxlsx)
-# 
-# wb <- createWorkbook()
-# for(nm in unique(filtered_df$category)) {
-#   sheet_df <- filtered_df %>% filter(category == nm)
-#   addWorksheet(wb, nm)
-#   writeData(wb, nm, sheet_df)
-# }
-# saveWorkbook(wb, "./Deseq2/filtered_enrichment_keywords.xlsx", overwrite = TRUE)
+#
+wb <- createWorkbook()
+for(nm in unique(filtered_df$category)) {
+  sheet_df <- filtered_df %>% filter(category == nm)
+  addWorksheet(wb, nm)
+  writeData(wb, nm, sheet_df)
+}
+saveWorkbook(wb, "./Deseq2/SRP377060 - Leishmania/results/filtered_enrichment_keywords.xlsx", overwrite = TRUE)
 
 
 write.csv(filtered_df,
@@ -858,9 +912,7 @@ library(dplyr)
 library(openxlsx)
 
 # 1) lista de genes de interesse
-targets <- c("METTL14","ALKBH5","YTHDC2","ALKBH3","ALKBH1","ALKBH7",
-             "TET1","TRMT6","NML","RRP8","TRMT10C","TRMT61B","TRMT61A",
-             "NSUN2","TRDMT1","NAT10","ALYREF","YBX1","HAT1",
+targets <- c("NAT10","HAT1",
              "KAT2A","KAT2B","KAT5","KAT6A","KAT6B","KAT7","KAT8","KAT12",
              "GTF3C4","CREBBP","aTAT1","p300","HDAC1","HDAC2","HDAC3",
              "HDAC4","HDAC5","HDAC6","HDAC7","HDAC8","HDAC9","HDAC10",
@@ -903,4 +955,41 @@ write.csv(filtered_genes_df,
 ######################################################################################################################
 
 
+
+
+
+library(dplyr)
+library(stringr)
+
+# 1) sua lista de genes-alvo em uppercase
+targets_up <- toupper(targets)
+
+# 2) função que extrai apenas os targets, retornando NA se não houver
+extract_targets <- function(geneID_string) {
+  genes <- str_split(geneID_string, "/", simplify = TRUE)
+  found <- genes[ toupper(genes) %in% targets_up ]
+  if (length(found) == 0) return(NA_character_)
+  paste(found, collapse = "/")
+}
+
+# 3) função que reordena colocando targets na frente
+reorder_with_targets_first <- function(geneID_string) {
+  genes <- str_split(geneID_string, "/", simplify = TRUE)
+  is_tgt <- toupper(genes) %in% targets_up
+  # targets primeiro, depois os demais na ordem original
+  new_order <- c(genes[is_tgt], genes[!is_tgt])
+  paste(new_order, collapse = "/")
+}
+
+# 4) aplica ao seu data.frame
+df2 <- filtered_genes_df %>%
+  mutate(
+    only_targets   = sapply(geneID, extract_targets),
+    geneID_reorder = sapply(geneID, reorder_with_targets_first)
+  )
+
+# Exemplo de uso:
+df2 %>% select(category, geneID, only_targets, geneID_reorder) %>% head()
+
+write.xlsx(df2, "./Deseq2/SRP377060 - Leishmania/results/with_targets_and_reordered.xlsx", overwrite = TRUE)
 

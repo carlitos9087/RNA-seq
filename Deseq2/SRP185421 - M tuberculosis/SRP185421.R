@@ -727,16 +727,16 @@ run_deseq_up_down_enrichment <- function(dds,
 
 
 run_deseq_up_down_enrichment <- function(dds,
-                                         up_threshold     = 1,
-                                         down_threshold   = -1,
-                                         padj_cutoff      = 0.05,
-                                         ontologies       = c("BP","MF"),
-                                         pAdjustMethod    = "BH",
-                                         pvalueCutoff     = 0.05,
-                                         qvalueCutoff     = 0.2,
+                                         up_threshold   = 1,
+                                         down_threshold = -1,
+                                         padj_cutoff    = 0.05,
+                                         ontologies     = c("BP","MF"),
+                                         pAdjustMethod  = "BH",
+                                         pvalueCutoff   = 0.05,
+                                         qvalueCutoff   = 0.2,
                                          output_prefix) {
   
-  # (1) Extrai DEGs
+  # (1) Extrai DEGs e mantém em memória
   degs <- run_deseq_up_down_analysis(dds,
                                      up_threshold   = up_threshold,
                                      down_threshold = down_threshold,
@@ -745,57 +745,61 @@ run_deseq_up_down_enrichment <- function(dds,
   up_ids   <- na.omit(as.character(degs$up$Entrez_ID))
   down_ids <- na.omit(as.character(degs$down$Entrez_ID))
   
-  # Determina orgDb
+  # Determina o OrgDb
   orgDb <- select_orgDb(unique(c(up_ids, down_ids)))
   
-  # Prepara workbook para todas as abas
+  # Resultado em lista
+  enrich_results <- list()
+  
+  # Inicia workbook para salvar todos os resultados
   wb <- createWorkbook()
   
   for(ont in ontologies) {
-    # Enriquecimento para up
-    ego_up <- enrichGO(
-      gene          = up_ids,
-      OrgDb         = orgDb,
-      keyType       = "ENTREZID",
-      ont           = ont,
-      pAdjustMethod = pAdjustMethod,
-      pvalueCutoff  = pvalueCutoff,
-      qvalueCutoff  = qvalueCutoff,
-      readable      = TRUE
-    )
+    # up-regulated
+    ego_up <- enrichGO(gene          = up_ids,
+                       OrgDb         = orgDb,
+                       keyType       = "ENTREZID",
+                       ont           = ont,
+                       pAdjustMethod = pAdjustMethod,
+                       pvalueCutoff  = pvalueCutoff,
+                       qvalueCutoff  = qvalueCutoff,
+                       readable      = TRUE)
+    enrich_results[[paste0("up_", ont)]] <- ego_up
+    
     sheet_up <- paste0("Up_", ont)
     addWorksheet(wb, sheet_up)
     writeData(wb, sheet_up, as.data.frame(ego_up))
-    
-    # Gera dotplot
     pdf(paste0(output_prefix, "_", sheet_up, ".pdf"), width = 10, height = 8)
     print(dotplot(ego_up, showCategory = 20) + ggtitle(paste("GO", ont, "Enrichment for Upregulated Genes")))
     dev.off()
     
-    # Enriquecimento para down
-    ego_down <- enrichGO(
-      gene          = down_ids,
-      OrgDb         = orgDb,
-      keyType       = "ENTREZID",
-      ont           = ont,
-      pAdjustMethod = pAdjustMethod,
-      pvalueCutoff  = pvalueCutoff,
-      qvalueCutoff  = qvalueCutoff,
-      readable      = TRUE
-    )
+    # down-regulated
+    ego_down <- enrichGO(gene          = down_ids,
+                         OrgDb         = orgDb,
+                         keyType       = "ENTREZID",
+                         ont           = ont,
+                         pAdjustMethod = pAdjustMethod,
+                         pvalueCutoff  = pvalueCutoff,
+                         qvalueCutoff  = qvalueCutoff,
+                         readable      = TRUE)
+    enrich_results[[paste0("down_", ont)]] <- ego_down
+    
     sheet_down <- paste0("Down_", ont)
     addWorksheet(wb, sheet_down)
     writeData(wb, sheet_down, as.data.frame(ego_down))
-    
     pdf(paste0(output_prefix, "_", sheet_down, ".pdf"), width = 10, height = 8)
     print(dotplot(ego_down, showCategory = 20) + ggtitle(paste("GO", ont, "Enrichment for Downregulated Genes")))
     dev.off()
   }
   
-  # Salva Excel final com todas as abas
+  # Salva workbook com todas as abas
   saveWorkbook(wb, paste0(output_prefix, "_Enrichment_GO.xlsx"), overwrite = TRUE)
   message("GO enrichment (BP & MF) completed! Files saved with prefix: ", output_prefix)
+  
+  # Retorna lista com objetos enrichResult
+  return(enrich_results)
 }
+
 
 
 # # Supondo que 'dds_nf_ilp' seja o objeto DESeq2 resultante da comparação desejada.
@@ -821,7 +825,7 @@ up_down_enrich_results <- run_deseq_up_down_enrichment(
   output_prefix   = "./Deseq2/SRP185421 - M tuberculosis/results/DESeq2_UpDown"
 )
 
-
+up_down_enrich_results
 
 
 #################
@@ -879,5 +883,136 @@ up_down_enrich_results <- run_deseq_up_down_enrichment(
 #                                                        qvalueCutoff = 0.2,
 #                                                        output_file_prefix = "./Deseq2/SRP185421 - M tuberculosis/results/DESeq2_UpDown")
 # 
+
+
+head(up_down_enrich_results)
+
+
+keywords <- c("acetyltransferase", "acetylation", "desacetylation",
+              "histone lysine","histone", 
+              "methyltransferase",
+              "deacetylase",
+              "histone deacetylase",
+              "lysine acetyltransferase",
+              "lysine")
+
+# monta uma regex que busca qualquer um deles (case insensitive)
+pattern  <- paste(keywords, collapse = "|")
 # 
+res_list <- up_down_enrich_results
+# 
+library(dplyr)
+filtered <- lapply(names(res_list), function(nm) {
+  df <- as.data.frame(res_list[[nm]])
+  df %>%
+    filter(grepl(pattern, Description, ignore.case = TRUE)) %>%
+    mutate(category = nm)
+})
+filtered_df <- bind_rows(filtered)
+filtered_df
+
+
+
+# library(openxlsx)
+#
+wb <- createWorkbook()
+for(nm in unique(filtered_df$category)) {
+  sheet_df <- filtered_df %>% filter(category == nm)
+  addWorksheet(wb, nm)
+  writeData(wb, nm, sheet_df)
+}
+saveWorkbook(wb, "./Deseq2/SRP185421 - M tuberculosis/results/filtered_enrichment_keywords.xlsx", overwrite = TRUE)
+
+
+write.csv(filtered_df,
+          "./Deseq2/SRP185421 - M tuberculosis/results/filtered_enrichment_keywords_all.csv",
+          row.names = FALSE)
+
+
+
+
+library(dplyr)
+library(openxlsx)
+
+# 1) lista de genes de interesse
+targets <- c("NAT10","HAT1",
+             "KAT2A","KAT2B","KAT5","KAT6A","KAT6B","KAT7","KAT8","KAT12",
+             "GTF3C4","CREBBP","aTAT1","p300","HDAC1","HDAC2","HDAC3",
+             "HDAC4","HDAC5","HDAC6","HDAC7","HDAC8","HDAC9","HDAC10",
+             "SIRT1","SIRT2","SIRT3","SIRT4","SIRT5","SIRT6","SIRT7")
+
+# monta regex: palavra exata, ignorando case
+pattern_genes <- paste0("\\b(", paste(targets, collapse="|"), ")\\b")
+
+# 2) percorre cada categoria de enrichment, filtra pelo geneID
+filtered_by_gene <- lapply(names(up_down_enrich_results), function(cat) {
+  df <- as.data.frame(up_down_enrich_results[[cat]])
+  df %>%
+    # geneID é uma string do tipo "GeneA/GeneB/…"
+    filter(grepl(pattern_genes, geneID, ignore.case = TRUE)) %>%
+    mutate(category = cat)
+})
+
+# une em um só
+filtered_genes_df <- bind_rows(filtered_by_gene)
+
+# 3) salva em Excel, uma aba por categoria
+wb2 <- createWorkbook()
+for(cat in unique(filtered_genes_df$category)) {
+  sheet_df <- filtered_genes_df %>% filter(category == cat)
+  addWorksheet(wb2, cat)
+  writeData(wb2, cat, sheet_df)
+}
+saveWorkbook(wb2, "./Deseq2/SRP185421 - M tuberculosis/results/filtered_by_genes_enrichment_targets.xlsx", overwrite = TRUE)
+
+# 4) opcional: salva um CSV único
+write.csv(filtered_genes_df,
+          "./Deseq2/SRP185421 - M tuberculosis/results/filtered_by_genes_enrichment_all.csv",
+          row.names = FALSE)
+
+# Em memória você fica com:
+#   filtered_genes_df        # todas as linhas que contêm algum gene alvo
+#   filtered_by_gene$up_BP   # etc., por categoria
+
+
+######################################################################################################################
+
+
+
+library(dplyr)
+library(stringr)
+
+# 1) sua lista de genes-alvo em uppercase
+targets_up <- toupper(targets)
+
+# 2) função que extrai apenas os targets, retornando NA se não houver
+extract_targets <- function(geneID_string) {
+  genes <- str_split(geneID_string, "/", simplify = TRUE)
+  found <- genes[ toupper(genes) %in% targets_up ]
+  if (length(found) == 0) return(NA_character_)
+  paste(found, collapse = "/")
+}
+
+# 3) função que reordena colocando targets na frente
+reorder_with_targets_first <- function(geneID_string) {
+  genes <- str_split(geneID_string, "/", simplify = TRUE)
+  is_tgt <- toupper(genes) %in% targets_up
+  # targets primeiro, depois os demais na ordem original
+  new_order <- c(genes[is_tgt], genes[!is_tgt])
+  paste(new_order, collapse = "/")
+}
+
+# 4) aplica ao seu data.frame
+df2 <- filtered_genes_df %>%
+  mutate(
+    only_targets   = sapply(geneID, extract_targets),
+    geneID_reorder = sapply(geneID, reorder_with_targets_first)
+  )
+
+# Exemplo de uso:
+df2 %>% select(category, geneID, only_targets, geneID_reorder) %>% head()
+
+write.xlsx(df2, "./Deseq2/SRP185421 - M tuberculosis/results/with_targets_and_reordered.xlsx", overwrite = TRUE)
+
+
 
