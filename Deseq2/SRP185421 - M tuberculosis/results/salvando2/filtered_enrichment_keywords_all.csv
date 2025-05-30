@@ -1,0 +1,2 @@
+"ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","qvalue","geneID","Count","category"
+"GO:0042826","histone deacetylase binding","21/2184","143/28407",0.00310326143369494,0.0190274258191696,0.0135516860202257,"Tcf21/Mier2/Hic1/Tbx2/Ikzf3/Lpin1/Dact1/Gli3/Mef2c/Mapk8/Hr/Hdac10/Hes1/Nrip1/Sik1/Zbtb7b/Lef1/Runx3/Chd5/Mef2b/Bex4",21,"up_MF"

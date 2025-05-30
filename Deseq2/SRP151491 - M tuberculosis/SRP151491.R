@@ -1,3 +1,5 @@
+# install.packages("VennDiagram")
+# Define o diretório de trabalho
 setwd("/Users/carlitos/Desktop/RNA-seq/")
 
 # Carregando os pacotes necessários
@@ -178,6 +180,7 @@ convert_entrez_to_symbol <- function(entrez_ids) {
   return(gene_symbols)
 }
 
+
 # run_volcano_plot <- function(dds, output_file, pval_threshold = 0.05, log2fc_threshold = 1) {
 #   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
 #   
@@ -333,7 +336,7 @@ run_ma_plot <- function(dds, output_file, padj_threshold = 0.05, log2fc_label = 
   return(p)
 }
 
-
+phenoData
 # Função DESeq2: análise e salvamento dos resultados
 run_deseq_analysis <- function(data, phenoData, group1, group2, output_file) {
   # Cria o diretório de saída, se não existir
@@ -448,6 +451,33 @@ run_venn_analysis <- function(dds1, dds2, comparison1, comparison2, output_prefi
 }
 
 
+run_deseq_up_down_analysis <- function(dds, up_threshold, down_threshold, padj_cutoff, output_file) {
+  # Executa a análise diferencial
+  res <- results(dds)
+  
+  # Filtra genes upregulados
+  up_genes <- subset(res, log2FoldChange > up_threshold & padj < padj_cutoff)
+  up_genes <- up_genes[!is.na(up_genes$padj), ]
+  
+  # Filtra genes downregulados
+  down_genes <- subset(res, log2FoldChange < down_threshold & padj < padj_cutoff)
+  down_genes <- down_genes[!is.na(down_genes$padj), ]
+  
+  # Converte rownames (genes) para uma coluna separada
+  up_genes$Entrez_ID <- rownames(up_genes)
+  down_genes$Entrez_ID <- rownames(down_genes)
+  
+  # Salva os resultados em Excel
+  wb <- createWorkbook()
+  addWorksheet(wb, "Upregulated")
+  addWorksheet(wb, "Downregulated")
+  writeData(wb, "Upregulated", up_genes)
+  writeData(wb, "Downregulated", down_genes)
+  saveWorkbook(wb, output_file, overwrite = TRUE)
+  
+  return(list(up = up_genes, down = down_genes))
+}
+
 ###########################################
 # 5. Execução das análises
 ###########################################
@@ -473,7 +503,7 @@ pca_nf_ilp <- run_pca_analysis(dds_nf_ilp, "./Deseq2/SRP151491 - M tuberculosis/
 # pca_nf_ifp <- run_pca_analysis(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/PCA_NonInfected_vs_InfectedFixed.jpeg")
 
 # Executa e salva os mapas de distância entre amostras
-run_sample_distances(dds_nf_ilp, "./Deseq2/SRP151491 - M tuberculosis/results/SampleDistances_Uninfected_vs_Infected.jpeg")
+run_sample_distances(dds_nf_ilp, "./Deseq2/SRP151491 - M tuberculosis/SampleDistances_Uninfected_vs_Infected.jpeg")
 # run_sample_distances(dds_nf_ifp, "./Deseq2/SRP377060 - Leishmania/results/SampleDistances_NonInfected_vs_InfectedFixed.jpeg")
 
 # Executa e salva os gráficos de Dispersion, Histograma de p-values e MA-plot
@@ -496,33 +526,94 @@ run_volcano_plot(dds_nf_ilp, "./Deseq2/SRP151491 - M tuberculosis/results/Volcan
 
 
 
+# run_venn_analysis(dds_nf_ilp, dds_nf_ifp, 
+#                   "NonInfected_vs_InfectedLive", "NonInfected_vs_InfectedFixed",
+#                   "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis")
+
 
 ############################
 
-library(openxlsx)
-library(clusterProfiler)
-library(org.Hs.eg.db)
-library(org.Mm.eg.db)
-library(ggplot2)
-library(enrichplot)
+# library(openxlsx)
+# library(clusterProfiler)
+# library(org.Hs.eg.db)
+# library(org.Mm.eg.db)
+# library(ggplot2)
+# library(enrichplot)
+# 
+# # Função para detectar o organismo com base nos IDs
+# detect_organism <- function(entrez_ids) {
+#   hs_ids <- keys(org.Hs.eg.db, keytype = "ENTREZID")
+#   mm_ids <- keys(org.Mm.eg.db, keytype = "ENTREZID")
+#   
+#   if (any(entrez_ids %in% hs_ids)) {
+#     return("Homo sapiens")
+#   } else if (any(entrez_ids %in% mm_ids)) {
+#     return("Mus musculus")
+#   } else {
+#     stop("Organismo não reconhecido para os IDs fornecidos.")
+#   }
+# }
+# 
+# # Define o arquivo de entrada (o Excel com as abas de Venn)
+# input_file <- "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis_VennData.xlsx"
+# 
+# # Obter os nomes das abas no arquivo Excel
+# sheet_names <- getSheetNames(input_file)
 
-# Função para detectar o organismo com base nos IDs
-detect_organism <- function(entrez_ids) {
-  hs_ids <- keys(org.Hs.eg.db, keytype = "ENTREZID")
-  mm_ids <- keys(org.Mm.eg.db, keytype = "ENTREZID")
-  
-  if (any(entrez_ids %in% hs_ids)) {
-    return("Homo sapiens")
-  } else if (any(entrez_ids %in% mm_ids)) {
-    return("Mus musculus")
-  } else {
-    stop("Organismo não reconhecido para os IDs fornecidos.")
-  }
-}
-
+# Loop por cada aba para realizar enriquecimento
+# for(sheet in sheet_names) {
+#   # Ler a aba
+#   gene_df <- read.xlsx(input_file, sheet = sheet)
+#   
+#   # Verifica se a coluna "Entrez_ID" existe
+#   if(!("Entrez_ID" %in% colnames(gene_df))) {
+#     stop("A coluna 'Entrez_ID' não foi encontrada na aba ", sheet)
+#   }
+#   
+#   # Pega a lista de IDs, removendo NAs ou strings vazias
+#   gene_list <- as.character(gene_df$Entrez_ID)
+#   gene_list <- gene_list[!is.na(gene_list) & gene_list != ""]
+#   
+#   # Detecta o organismo usando a função detect_organism
+#   organism <- tryCatch(detect_organism(gene_list), error = function(e) NA)
+#   if(is.na(organism)) {
+#     message("Nenhum organismo reconhecido para a aba ", sheet, ". Pulando enriquecimento.")
+#     next
+#   }
+#   
+#   # Seleciona o OrgDb com base no organismo detectado
+#   orgDb <- if(organism == "Homo sapiens") org.Hs.eg.db else org.Mm.eg.db
+#   
+#   # Executa enriquecimento GO para Biological Process (BP)
+#   ego <- enrichGO(gene         = gene_list,
+#                   OrgDb        = orgDb,
+#                   keyType      = "ENTREZID",
+#                   ont          = "BP",
+#                   pAdjustMethod = "BH",
+#                   pvalueCutoff  = 0.05,
+#                   qvalueCutoff  = 0.2,
+#                   readable     = TRUE)
+#   
+#   # Se não houver genes mapeados, pula a aba
+#   if(is.null(ego) || nrow(as.data.frame(ego)) == 0) {
+#     message("Nenhum gene mapeado para enriquecimento na aba ", sheet, ". Pulando.")
+#     next
+#   }
+#   
+#   # Salva a tabela de enriquecimento em um arquivo Excel
+#   output_excel <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".xlsx")
+#   write.xlsx(as.data.frame(ego), file = output_excel, overwrite = TRUE)
+#   
+#   # Gera e salva um dotplot (como PDF) para visualização
+#   output_pdf <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".pdf")
+#   pdf(output_pdf, width = 10, height = 8)
+#   print(dotplot(ego, showCategory = 20) + ggtitle(paste("GO Enrichment for", sheet)))
+#   dev.off()
+#   
+#   message("Enrichment analysis for sheet '", sheet, "' completed!")
+# }
 
 ######################################
-
 
 
 
@@ -557,6 +648,82 @@ select_orgDb <- function(gene_ids) {
     return(org.Mm.eg.db)
   }
 }
+
+# Função principal para análise de enriquecimento
+run_deseq_up_down_enrichment <- function(dds, 
+                                         up_threshold = 1, 
+                                         down_threshold = -1, 
+                                         padj_cutoff = 0.05,
+                                         ont = "BP",
+                                         pAdjustMethod = "BH",
+                                         pvalueCutoff = 0.05,
+                                         qvalueCutoff = 0.2,
+                                         output_file_prefix) {
+  
+  # 1. Extrai DEGs e salva os resultados em Excel
+  deg_results <- run_deseq_up_down_analysis(dds, 
+                                            up_threshold = up_threshold, 
+                                            down_threshold = down_threshold, 
+                                            padj_cutoff = padj_cutoff,
+                                            output_file = paste0(output_file_prefix, "_DEGs.xlsx"))
+  
+  # Obtém os vetores de IDs (como caracteres) para up e down
+  up_ids <- as.character(deg_results$up$Entrez_ID)
+  down_ids <- as.character(deg_results$down$Entrez_ID)
+  
+  # Remove possíveis strings vazias
+  up_ids <- up_ids[up_ids != ""]
+  down_ids <- down_ids[down_ids != ""]
+  
+  # Determina o OrgDb a partir dos IDs
+  all_ids <- unique(c(up_ids, down_ids))
+  orgDb <- select_orgDb(all_ids)
+  
+  # 2. Realiza enriquecimento GO para os genes upregulados e downregulados
+  ego_up <- enrichGO(gene = up_ids,
+                     OrgDb = orgDb,
+                     keyType = "ENTREZID",
+                     ont = ont,
+                     pAdjustMethod = pAdjustMethod,
+                     pvalueCutoff = pvalueCutoff,
+                     qvalueCutoff = qvalueCutoff,
+                     readable = TRUE)
+  
+  ego_down <- enrichGO(gene = down_ids,
+                       OrgDb = orgDb,
+                       keyType = "ENTREZID",
+                       ont = ont,
+                       pAdjustMethod = pAdjustMethod,
+                       pvalueCutoff = pvalueCutoff,
+                       qvalueCutoff = qvalueCutoff,
+                       readable = TRUE)
+  
+  # 3. Salva os resultados de enriquecimento em uma planilha Excel com duas abas
+  wb <- createWorkbook()
+  addWorksheet(wb, "Up_Enrichment")
+  addWorksheet(wb, "Down_Enrichment")
+  writeData(wb, "Up_Enrichment", as.data.frame(ego_up))
+  writeData(wb, "Down_Enrichment", as.data.frame(ego_down))
+  saveWorkbook(wb, paste0(output_file_prefix, "_Enrichment.xlsx"), overwrite = TRUE)
+  
+  # 4. Gera e salva os dotplots de enriquecimento (PDF)
+  output_pdf_up <- paste0(output_file_prefix, "_Enrichment_Up.pdf")
+  output_pdf_down <- paste0(output_file_prefix, "_Enrichment_Down.pdf")
+  
+  pdf(output_pdf_up, width = 10, height = 8)
+  print(dotplot(ego_up, showCategory = 20) + ggtitle("GO Enrichment for Upregulated Genes"))
+  dev.off()
+  
+  pdf(output_pdf_down, width = 10, height = 8)
+  print(dotplot(ego_down, showCategory = 20) + ggtitle("GO Enrichment for Downregulated Genes"))
+  dev.off()
+  
+  message("Enrichment analysis for DEGs completed! Files saved with prefix: ", output_file_prefix)
+  
+  return(list(ego_up = ego_up, ego_down = ego_down))
+}
+
+# Exemplo de uso:
 
 
 run_deseq_up_down_enrichment <- function(dds,
@@ -655,8 +822,11 @@ up_down_enrich_results <- run_deseq_up_down_enrichment(
   pAdjustMethod   = "BH",
   pvalueCutoff    = 0.05,
   qvalueCutoff    = 0.2,
-  output_prefix   = "./Deseq2/SRP151491 - M tuberculosis//results/DESeq2_UpDown"
+  output_prefix   = "./Deseq2/SRP151491 - M tuberculosis/results/DESeq2_UpDown"
 )
+
+up_down_enrich_results
+
 
 up_down_enrich_results
 
@@ -892,70 +1062,70 @@ head(up_down_enrich_results)
 
 
 #################################################################
-
-library(dplyr)
-library(purrr)
-library(openxlsx)
-
-process_enrichment_results <- function(enrich_results, targets, keywords, output_path) {
-  # Preparo de padrões
-  targets_up       <- toupper(targets)
-  pattern_keywords <- paste(keywords, collapse = "|")
-  pattern_genes    <- paste0("\\b(", paste(targets, collapse = "|"), ")\\b")
-  
-  # Mapeia cada categoria e retorna um data.frame
-  combined_df <- map_dfr(names(enrich_results), function(cat) {
-    df <- as.data.frame(enrich_results[[cat]])
-    
-    df %>%
-      mutate(
-        original_row    = row_number(),
-        category        = cat
-      ) %>%
-      filter(
-        str_detect(Description, regex(pattern_keywords, ignore_case = TRUE)) |
-          str_detect(geneID,      regex(pattern_genes,    ignore_case = TRUE))
-      ) %>%
-      mutate(
-        only_targets      = extract_targets_vec(geneID),
-        geneID_reorder    = reorder_with_targets_vec(geneID)
-      )
-  })
-  
-  # Escreve em um único Excel com abas por categoria
-  wb <- createWorkbook()
-  for(cat in unique(combined_df$category)) {
-    sheet_df <- filter(combined_df, category == cat)
-    addWorksheet(wb, cat)
-    writeData(wb, cat, sheet_df)
-  }
-  saveWorkbook(wb, output_path, overwrite = TRUE)
-  
-  return(combined_df)
-}
-
-
-
-
-out_dir <- "./Deseq2/SRP151491 - M tuberculosis/results"
-output_file <- file.path(out_dir, "enrichment_combined.xlsx")
-
-dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
-
-# --- Alvos (genes e palavras-chave) ---
-targets <- c("NAT10", "HAT1", "KAT2A", "KAT2B", "KAT5", "KAT6A", "KAT6B", "KAT7", "KAT8", "KAT12",
-             "GTF3C4", "CREBBP", "aTAT1", "p300", "HDAC1", "HDAC2", "HDAC3", "HDAC4", "HDAC5",
-             "HDAC6", "HDAC7", "HDAC8", "HDAC9", "HDAC10", "SIRT1", "SIRT2", "SIRT3", "SIRT4",
-             "SIRT5", "SIRT6", "SIRT7")
-targets_up <- toupper(targets)
-
-keywords <- c("acetyltransferase", "acetylation", "desacetylation", "histone lysine", "histone",
-              "methyltransferase", "deacetylase", "histone deacetylase",
-              "lysine acetyltransferase", "lysine")
-
-# Execute
-final_df <- process_enrichment_results(up_down_enrich_results, targets, keywords, output_file)
-
+# 
+# library(dplyr)
+# library(purrr)
+# library(openxlsx)
+# 
+# process_enrichment_results <- function(enrich_results, targets, keywords, output_path) {
+#   # Preparo de padrões
+#   targets_up       <- toupper(targets)
+#   pattern_keywords <- paste(keywords, collapse = "|")
+#   pattern_genes    <- paste0("\\b(", paste(targets, collapse = "|"), ")\\b")
+#   
+#   # Mapeia cada categoria e retorna um data.frame
+#   combined_df <- map_dfr(names(enrich_results), function(cat) {
+#     df <- as.data.frame(enrich_results[[cat]])
+#     
+#     df %>%
+#       mutate(
+#         original_row    = row_number(),
+#         category        = cat
+#       ) %>%
+#       filter(
+#         str_detect(Description, regex(pattern_keywords, ignore_case = TRUE)) |
+#           str_detect(geneID,      regex(pattern_genes,    ignore_case = TRUE))
+#       ) %>%
+#       mutate(
+#         only_targets      = extract_targets_vec(geneID),
+#         geneID_reorder    = reorder_with_targets_vec(geneID)
+#       )
+#   })
+#   
+#   # Escreve em um único Excel com abas por categoria
+#   wb <- createWorkbook()
+#   for(cat in unique(combined_df$category)) {
+#     sheet_df <- filter(combined_df, category == cat)
+#     addWorksheet(wb, cat)
+#     writeData(wb, cat, sheet_df)
+#   }
+#   saveWorkbook(wb, output_path, overwrite = TRUE)
+#   
+#   return(combined_df)
+# }
+# 
+# 
+# 
+# 
+# out_dir <- "./Deseq2/SRP151491 - M tuberculosis/results"
+# output_file <- file.path(out_dir, "enrichment_combined.xlsx")
+# 
+# dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+# 
+# # --- Alvos (genes e palavras-chave) ---
+# targets <- c("NAT10", "HAT1", "KAT2A", "KAT2B", "KAT5", "KAT6A", "KAT6B", "KAT7", "KAT8", "KAT12",
+#              "GTF3C4", "CREBBP", "aTAT1", "p300", "HDAC1", "HDAC2", "HDAC3", "HDAC4", "HDAC5",
+#              "HDAC6", "HDAC7", "HDAC8", "HDAC9", "HDAC10", "SIRT1", "SIRT2", "SIRT3", "SIRT4",
+#              "SIRT5", "SIRT6", "SIRT7")
+# targets_up <- toupper(targets)
+# 
+# keywords <- c("acetyltransferase", "acetylation", "desacetylation", "histone lysine", "histone",
+#               "methyltransferase", "deacetylase", "histone deacetylase",
+#               "lysine acetyltransferase", "lysine")
+# 
+# # Execute
+# final_df <- process_enrichment_results(up_down_enrich_results, targets, keywords, output_file)
+# 
 
 
 ######################################
@@ -1052,76 +1222,76 @@ final_df <- process_enrichment_results(up_down_enrich_results, targets, keywords
 
 #####################################
 
-
-# --- 1. Pacotes & Paths ------------------------------------------------------
-library(dplyr)
-library(stringr)
-library(purrr)
-library(openxlsx)
-
-out_dir       <- "./Deseq2/SRP151491 - M tuberculosis/results"
-terms_file    <- file.path(out_dir, "enrichment_terms.xlsx")
-targets_file  <- file.path(out_dir, "enrichment_targets.xlsx")
-dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
-
-# --- 2. Definições -----------------------------------------------------------
-
-targets_up <- toupper(targets)
-pat_genes      <- paste0("\\b(", paste(targets, collapse="|"), ")\\b")
-pat_keywords   <- paste(keywords, collapse="|")
-
-# --- 3. Funções Auxiliares --------------------------------------------------
-extract_targets <- function(str) {
-  genes <- str_split(str, "/", simplify=TRUE)
-  found <- genes[toupper(genes) %in% targets_up]
-  if (!length(found)) NA_character_ else paste(found, collapse="/")
-}
-reorder_genes <- function(str) {
-  genes <- str_split(str, "/", simplify=TRUE)
-  tgt   <- genes[toupper(genes) %in% targets_up]
-  others<- genes[!toupper(genes) %in% targets_up]
-  paste(c(tgt, others), collapse="/")
-}
-
-# Função genérica para filtrar e enriquecer
-filter_and_augment <- function(results_list, filter_pattern, by_terms = TRUE) {
-  map_dfr(names(results_list), function(cat) {
-    df <- as.data.frame(results_list[[cat]]) %>%
-      mutate(original_row = row_number(),
-             category     = cat) %>%
-      filter(str_detect(
-        if (by_terms) Description else geneID,
-        regex(filter_pattern, ignore_case=TRUE)
-      )) %>%
-      mutate(
-        only_targets   = vapply(geneID, extract_targets, FUN.VALUE=character(1)),
-        geneID_reorder = vapply(geneID, reorder_genes,    FUN.VALUE=character(1))
-      )
-  })
-}
-
-# Função para escrever cada df em abas
-write_to_excel <- function(df, path) {
-  wb <- createWorkbook()
-  for(cat in unique(df$category)) {
-    sheet_df <- filter(df, category==cat)
-    addWorksheet(wb, cat)
-    writeData(wb, cat, sheet_df)
-  }
-  saveWorkbook(wb, path, overwrite=TRUE)
-}
-
-# --- 4. Gera e salva ---------------------------------------------------------
-
-# (A) Planilha de **termos**
-df_terms <- filter_and_augment(up_down_enrich_results, pat_keywords, by_terms = TRUE)
-write_to_excel(df_terms, terms_file)
-
-# (B) Planilha de **targets**
-df_targets <- filter_and_augment(up_down_enrich_results, pat_genes, by_terms = FALSE)
-write_to_excel(df_targets, targets_file)
-
-
+# 
+# # --- 1. Pacotes & Paths ------------------------------------------------------
+# library(dplyr)
+# library(stringr)
+# library(purrr)
+# library(openxlsx)
+# 
+# out_dir       <- "./Deseq2/SRP151491 - M tuberculosis/results"
+# terms_file    <- file.path(out_dir, "enrichment_terms.xlsx")
+# targets_file  <- file.path(out_dir, "enrichment_targets.xlsx")
+# dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+# 
+# # --- 2. Definições -----------------------------------------------------------
+# 
+# targets_up <- toupper(targets)
+# pat_genes      <- paste0("\\b(", paste(targets, collapse="|"), ")\\b")
+# pat_keywords   <- paste(keywords, collapse="|")
+# 
+# # --- 3. Funções Auxiliares --------------------------------------------------
+# extract_targets <- function(str) {
+#   genes <- str_split(str, "/", simplify=TRUE)
+#   found <- genes[toupper(genes) %in% targets_up]
+#   if (!length(found)) NA_character_ else paste(found, collapse="/")
+# }
+# reorder_genes <- function(str) {
+#   genes <- str_split(str, "/", simplify=TRUE)
+#   tgt   <- genes[toupper(genes) %in% targets_up]
+#   others<- genes[!toupper(genes) %in% targets_up]
+#   paste(c(tgt, others), collapse="/")
+# }
+# 
+# # Função genérica para filtrar e enriquecer
+# filter_and_augment <- function(results_list, filter_pattern, by_terms = TRUE) {
+#   map_dfr(names(results_list), function(cat) {
+#     df <- as.data.frame(results_list[[cat]]) %>%
+#       mutate(original_row = row_number(),
+#              category     = cat) %>%
+#       filter(str_detect(
+#         if (by_terms) Description else geneID,
+#         regex(filter_pattern, ignore_case=TRUE)
+#       )) %>%
+#       mutate(
+#         only_targets   = vapply(geneID, extract_targets, FUN.VALUE=character(1)),
+#         geneID_reorder = vapply(geneID, reorder_genes,    FUN.VALUE=character(1))
+#       )
+#   })
+# }
+# 
+# # Função para escrever cada df em abas
+# write_to_excel <- function(df, path) {
+#   wb <- createWorkbook()
+#   for(cat in unique(df$category)) {
+#     sheet_df <- filter(df, category==cat)
+#     addWorksheet(wb, cat)
+#     writeData(wb, cat, sheet_df)
+#   }
+#   saveWorkbook(wb, path, overwrite=TRUE)
+# }
+# 
+# # --- 4. Gera e salva ---------------------------------------------------------
+# 
+# # (A) Planilha de **termos**
+# df_terms <- filter_and_augment(up_down_enrich_results, pat_keywords, by_terms = TRUE)
+# write_to_excel(df_terms, terms_file)
+# 
+# # (B) Planilha de **targets**
+# df_targets <- filter_and_augment(up_down_enrich_results, pat_genes, by_terms = FALSE)
+# write_to_excel(df_targets, targets_file)
+# 
+# 
 
 
 
@@ -1137,53 +1307,67 @@ library(stringr)
 library(purrr)
 library(openxlsx)
 
-out_dir       <- "./Deseq2/SRP151491 - M tuberculosis/results"
+out_dir       <- "./Deseq2/SRP151491 - M tuberculosis/results/Enrichment_Analysis/"
 terms_file    <- file.path(out_dir, "enrichment_terms.xlsx")
 targets_file  <- file.path(out_dir, "enrichment_targets.xlsx")
 combined_file <- file.path(out_dir, "enrichment_combined.xlsx")
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 # --- 2. Definições -----------------------------------------------------------
-targets   <- c("NAT10","HAT1","KAT2A","KAT2B","KAT5","KAT6A","KAT6B",
-               "KAT7","KAT8","KAT12","GTF3C4","CREBBP","aTAT1","p300",
-               "HDAC1","HDAC2","HDAC3","HDAC4","HDAC5","HDAC6","HDAC7",
-               "HDAC8","HDAC9","HDAC10","SIRT1","SIRT2","SIRT3","SIRT4",
-               "SIRT5","SIRT6","SIRT7")
-keywords  <- c("acetyltransferase","acetylation","desacetylation",
-               "histone lysine","histone","methyltransferase",
-               "deacetylase","histone deacetylase",
-               "lysine acetyltransferase","lysine")
+targets   <- c(
+  "NAT10","HAT1","KAT2A","KAT2B","KAT5","KAT6A","KAT6B",
+  "KAT7","KAT8","KAT12","GTF3C4","CREBBP","aTAT1","p300",
+  "HDAC1","HDAC2","HDAC3","HDAC4","HDAC5","HDAC6","HDAC7",
+  "HDAC8","HDAC9","HDAC10","SIRT1","SIRT2","SIRT3","SIRT4",
+  "SIRT5","SIRT6","SIRT7"
+)
+keywords  <- c(
+  "acetyltransferase","acetylation","desacetylation",
+  "histone lysine","histone","methyltransferase",
+  "deacetylase","histone deacetylase",
+  "lysine acetyltransferase","lysine"
+)
 
 pat_genes    <- paste0("\\b(", paste(targets, collapse="|"), ")\\b")
 pat_keywords <- paste(keywords, collapse="|")
 targets_up   <- toupper(targets)
 
-# --- 3. Auxiliares -----------------------------------------------------------
+# --- 3. Funções Auxiliares ---------------------------------------------------
 
-# extrai só os alvos de geneID
-extract_targets <- function(g) {
-  gs <- str_split(g, "/", simplify=TRUE)
-  f  <- gs[toupper(gs) %in% targets_up]
-  if (!length(f)) NA_character_ else paste(f, collapse="/")
-}
-# coloca alvos primeiro
-reorder_genes <- function(g) {
-  gs <- str_split(g, "/", simplify=TRUE)
-  t  <- gs[toupper(gs) %in% targets_up]
-  o  <- gs[!toupper(gs) %in% targets_up]
-  paste(c(t,o), collapse="/")
+# Extrai apenas os genes-alvo de um geneID “A/B/C…”
+extract_targets <- function(geneID) {
+  parts <- str_split(geneID, "/", simplify = TRUE)
+  found <- parts[toupper(parts) %in% targets_up]
+  if (length(found) == 0) NA_character_ else paste(found, collapse = "/")
 }
 
-# formata e adiciona columns
-augment_df <- function(df) {
-  df %>% mutate(
-    original_row   = row_number(),
-    only_targets   = vapply(geneID, extract_targets,    FUN.VALUE=character(1)),
-    geneID_reorder = vapply(geneID, reorder_genes,      FUN.VALUE=character(1))
-  )
+# Reordena geneID colocando os alvos na frente
+reorder_genes <- function(geneID) {
+  parts <- str_split(geneID, "/", simplify = TRUE)
+  tgt    <- parts[toupper(parts) %in% targets_up]
+  other  <- parts[!toupper(parts) %in% targets_up]
+  paste(c(tgt, other), collapse = "/")
 }
 
-# escreve um df dividido por categoria
+# Filtra e anexa colunas comuns
+filter_and_augment <- function(results_list, pattern, on_desc = TRUE) {
+  map_dfr(names(results_list), function(cat) {
+    df <- as.data.frame(results_list[[cat]])
+    df$original_row <- seq_len(nrow(df))
+    df %>%
+      mutate(category = cat) %>%
+      filter(
+        if (on_desc) str_detect(Description, regex(pattern, ignore_case = TRUE))
+        else         str_detect(geneID,      regex(pattern, ignore_case = TRUE))
+      ) %>%
+      mutate(
+        only_targets   = vapply(geneID, extract_targets, FUN.VALUE = character(1)),
+        geneID_reorder = vapply(geneID, reorder_genes,   FUN.VALUE = character(1))
+      )
+  })
+}
+
+# Escreve abas de um data.frame dividido por “category”
 write_by_category <- function(df, path) {
   wb <- createWorkbook()
   df %>% split(.$category) %>%
@@ -1191,36 +1375,20 @@ write_by_category <- function(df, path) {
       addWorksheet(wb, .y)
       writeData(wb, .y, .x)
     })
-  saveWorkbook(wb, path, overwrite=TRUE)
+  saveWorkbook(wb, path, overwrite = TRUE)
 }
 
-# filtra descriptions ou geneIDs
-filter_enrich <- function(results, pattern, on_desc=TRUE) {
-  map_dfr(names(results), function(cat) {
-    results[[cat]] %>% 
-      as.data.frame() %>%
-      mutate(category = cat) %>%
-      filter(
-        if (on_desc) str_detect(Description, regex(pattern, ignore_case=TRUE))
-        else         str_detect(geneID,      regex(pattern, ignore_case=TRUE))
-      )
-  })
-}
+# --- 4. Geração das três planilhas ------------------------------------------
 
-# --- 4. Geração das planilhas -----------------------------------------------
+# (A) Enriquecimento apenas por termos
+df_terms   <- filter_and_augment(up_down_enrich_results, pat_keywords, TRUE)
+write_by_category(df_terms,       terms_file)
 
-# (A) somente termos
-df_terms   <- filter_enrich(up_down_enrich_results, pat_keywords, TRUE)  %>% augment_df()
-write_by_category(df_terms, terms_file)
+# (B) Enriquecimento apenas por genes-alvo
+df_targets <- filter_and_augment(up_down_enrich_results, pat_genes,    FALSE)
+write_by_category(df_targets,     targets_file)
 
-# (B) somente targets
-df_targets <- filter_enrich(up_down_enrich_results, pat_genes,    FALSE) %>% augment_df()
-write_by_category(df_targets, targets_file)
-
-# (C) combinado (termos ∪ targets)
-df_combined <- bind_rows(
-  df_terms,
-  df_targets
-) %>% distinct(category, ID, .keep_all=TRUE)
-write_by_category(df_combined, combined_file)
-
+# (C) União (termos ∪ targets), sem duplicar entradas por category+ID
+df_combined <- bind_rows(df_terms, df_targets) %>%
+  distinct(category, ID, .keep_all = TRUE)
+write_by_category(df_combined,    combined_file)
