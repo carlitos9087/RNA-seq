@@ -1313,6 +1313,7 @@ targets_file  <- file.path(out_dir, "enrichment_targets.xlsx")
 combined_file <- file.path(out_dir, "enrichment_combined.xlsx")
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
+
 # --- 2. Definições -----------------------------------------------------------
 targets   <- c(
   "NAT10","HAT1","KAT2A","KAT2B","KAT5","KAT6A","KAT6B",
