@@ -1393,3 +1393,4 @@ write_by_category(df_targets,     targets_file)
 df_combined <- bind_rows(df_terms, df_targets) %>%
   distinct(category, ID, .keep_all = TRUE)
 write_by_category(df_combined,    combined_file)
+

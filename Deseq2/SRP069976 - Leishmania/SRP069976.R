@@ -708,7 +708,7 @@ run_volcano_plot(Health_vs_Late_Inf, file.path(results_dir, "Volcano_Health_vs_L
 # Executando a análise de Venn com as três comparações
 run_venn_analysis_three(Health_vs_Chronic_Inf, Health_vs_Early_Inf, Health_vs_Late_Inf,
                         "Health vs Chronic", "Health vs Early", "Health vs Late", file.path(results_dir, "Venn_3Comparisons"))
-
+7+7
 
 ############################
 
@@ -1236,3 +1236,5 @@ write_by_category(df_targets,     targets_file)
 df_combined <- bind_rows(df_terms, df_targets) %>%
   distinct(category, ID, .keep_all = TRUE)
 write_by_category(df_combined,    combined_file)
+
+4+3
