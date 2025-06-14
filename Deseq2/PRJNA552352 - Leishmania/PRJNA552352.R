@@ -570,160 +570,263 @@ select_orgDb <- function(gene_ids) {
   }
 }
 
-# Função principal para análise de enriquecimento
-run_deseq_up_down_enrichment <- function(dds, 
-                                         up_threshold = 1, 
-                                         down_threshold = -1, 
-                                         padj_cutoff = 0.05,
-                                         ont = "BP",
-                                         pAdjustMethod = "BH",
-                                         pvalueCutoff = 0.05,
-                                         qvalueCutoff = 0.2,
-                                         output_file_prefix) {
-  
-  # 1. Extrai DEGs e salva os resultados em Excel
-  deg_results <- run_deseq_up_down_analysis(dds, 
-                                            up_threshold = up_threshold, 
-                                            down_threshold = down_threshold, 
-                                            padj_cutoff = padj_cutoff,
-                                            output_file = paste0(output_file_prefix, "_DEGs.xlsx"))
-  
-  # Obtém os vetores de IDs (como caracteres) para up e down
-  up_ids <- as.character(deg_results$up$Entrez_ID)
-  down_ids <- as.character(deg_results$down$Entrez_ID)
-  
-  # Remove possíveis strings vazias
-  up_ids <- up_ids[up_ids != ""]
-  down_ids <- down_ids[down_ids != ""]
-  
-  # Determina o OrgDb a partir dos IDs
-  all_ids <- unique(c(up_ids, down_ids))
-  orgDb <- select_orgDb(all_ids)
-  
-  # 2. Realiza enriquecimento GO para os genes upregulados e downregulados
-  ego_up <- enrichGO(gene = up_ids,
-                     OrgDb = orgDb,
-                     keyType = "ENTREZID",
-                     ont = ont,
-                     pAdjustMethod = pAdjustMethod,
-                     pvalueCutoff = pvalueCutoff,
-                     qvalueCutoff = qvalueCutoff,
-                     readable = TRUE)
-  
-  ego_down <- enrichGO(gene = down_ids,
-                       OrgDb = orgDb,
-                       keyType = "ENTREZID",
-                       ont = ont,
-                       pAdjustMethod = pAdjustMethod,
-                       pvalueCutoff = pvalueCutoff,
-                       qvalueCutoff = qvalueCutoff,
-                       readable = TRUE)
-  
-  # 3. Salva os resultados de enriquecimento em uma planilha Excel com duas abas
-  wb <- createWorkbook()
-  addWorksheet(wb, "Up_Enrichment")
-  addWorksheet(wb, "Down_Enrichment")
-  writeData(wb, "Up_Enrichment", as.data.frame(ego_up))
-  writeData(wb, "Down_Enrichment", as.data.frame(ego_down))
-  saveWorkbook(wb, paste0(output_file_prefix, "_Enrichment.xlsx"), overwrite = TRUE)
-  
-  # 4. Gera e salva os dotplots de enriquecimento (PDF)
-  output_pdf_up <- paste0(output_file_prefix, "_Enrichment_Up.pdf")
-  output_pdf_down <- paste0(output_file_prefix, "_Enrichment_Down.pdf")
-  
-  pdf(output_pdf_up, width = 10, height = 8)
-  print(dotplot(ego_up, showCategory = 20) + ggtitle("GO Enrichment for Upregulated Genes"))
-  dev.off()
-  
-  pdf(output_pdf_down, width = 10, height = 8)
-  print(dotplot(ego_down, showCategory = 20) + ggtitle("GO Enrichment for Downregulated Genes"))
-  dev.off()
-  
-  message("Enrichment analysis for DEGs completed! Files saved with prefix: ", output_file_prefix)
-  
-  return(list(ego_up = ego_up, ego_down = ego_down))
+
+
+
+
+# Função para selecionar o banco de dados correto
+select_orgDb <- function(gene_ids) {
+  organism <- detect_organism(gene_ids)
+  if (organism == "Homo sapiens") {
+    return(org.Hs.eg.db)
+  } else {
+    return(org.Mm.eg.db)
+  }
 }
 
-# # Exemplo de uso:
-# # Supondo que 'dds_nf_ilp' seja o objeto DESeq2 resultante da comparação desejada.
-# up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_nf_ilp,
-#                                                        up_threshold = 1,
-#                                                        down_threshold = -1,
-#                                                        padj_cutoff = 0.05,
-#                                                        ont = "BP",
-#                                                        pAdjustMethod = "BH",
-#                                                        pvalueCutoff = 0.05,
-#                                                        qvalueCutoff = 0.2,
-#                                                        output_file_prefix = "./Deseq2/SRP009251 - Leishmania/results/DESeq2_UpDown")
+run_deseq_up_down_enrichment <- function(dds,
+                                         up_threshold   = 1,
+                                         down_threshold = -1,
+                                         padj_cutoff    = 0.05,
+                                         ontologies     = c("BP", "MF"),
+                                         pAdjustMethod  = "BH",
+                                         pvalueCutoff   = 0.05,
+                                         qvalueCutoff   = 0.2,
+                                         output_prefix) {
+  
+  # (1) Extrai DEGs e salva em arquivo
+  degs <- run_deseq_up_down_analysis(dds,
+                                     up_threshold   = up_threshold,
+                                     down_threshold = down_threshold,
+                                     padj_cutoff    = padj_cutoff,
+                                     output_file    = paste0(output_prefix, "_DEGs.xlsx"))
+  
+  up_ids   <- na.omit(as.character(degs$up$Entrez_ID))
+  down_ids <- na.omit(as.character(degs$down$Entrez_ID))
+  
+  if (length(up_ids) == 0 && length(down_ids) == 0) {
+    stop("Nenhum gene upregulated ou downregulated encontrado para enriquecimento.")
+  }
+  
+  # Determina o OrgDb
+  orgDb <- select_orgDb(unique(c(up_ids, down_ids)))
+  
+  # Inicializa lista de resultados e workbook
+  enrich_results <- list()
+  wb <- createWorkbook()
+  
+  for (ont in ontologies) {
+    
+    # UPREGULATED
+    if (length(up_ids) > 0) {
+      ego_up <- tryCatch({
+        enrichGO(gene          = up_ids,
+                 OrgDb         = orgDb,
+                 keyType       = "ENTREZID",
+                 ont           = ont,
+                 pAdjustMethod = pAdjustMethod,
+                 pvalueCutoff  = pvalueCutoff,
+                 qvalueCutoff  = qvalueCutoff,
+                 readable      = TRUE)
+      }, error = function(e) NULL)
+      
+      if (!is.null(ego_up) && nrow(as.data.frame(ego_up)) > 0) {
+        enrich_results[[paste0("up_", ont)]] <- ego_up
+        
+        sheet_up <- paste0("Up_", ont)
+        addWorksheet(wb, sheet_up)
+        writeData(wb, sheet_up, as.data.frame(ego_up))
+        pdf(paste0(output_prefix, "_", sheet_up, ".pdf"), width = 10, height = 8)
+        print(dotplot(ego_up, showCategory = 20) + ggtitle(paste("GO", ont, "Enrichment for Upregulated Genes")))
+        dev.off()
+      } else {
+        message("Nenhum termo enriquecido encontrado para genes upregulated (", ont, ").")
+      }
+    }
+    
+    # DOWNREGULATED
+    if (length(down_ids) > 0) {
+      ego_down <- tryCatch({
+        enrichGO(gene          = down_ids,
+                 OrgDb         = orgDb,
+                 keyType       = "ENTREZID",
+                 ont           = ont,
+                 pAdjustMethod = pAdjustMethod,
+                 pvalueCutoff  = pvalueCutoff,
+                 qvalueCutoff  = qvalueCutoff,
+                 readable      = TRUE)
+      }, error = function(e) NULL)
+      
+      if (!is.null(ego_down) && nrow(as.data.frame(ego_down)) > 0) {
+        enrich_results[[paste0("down_", ont)]] <- ego_down
+        
+        sheet_down <- paste0("Down_", ont)
+        addWorksheet(wb, sheet_down)
+        writeData(wb, sheet_down, as.data.frame(ego_down))
+        pdf(paste0(output_prefix, "_", sheet_down, ".pdf"), width = 10, height = 8)
+        print(dotplot(ego_down, showCategory = 20) + ggtitle(paste("GO", ont, "Enrichment for Downregulated Genes")))
+        dev.off()
+      } else {
+        message("Nenhum termo enriquecido encontrado para genes downregulated (", ont, ").")
+      }
+    }
+  }
+  
+  # Salva workbook apenas se tiver conteúdo
+  if (length(wb$worksheets) > 0) {
+    saveWorkbook(wb, paste0(output_prefix, "_Enrichment_GO.xlsx"), overwrite = TRUE)
+  } else {
+    message("Nenhum resultado de enriquecimento foi salvo no Excel.")
+  }
+  
+  message("GO enrichment (BP & MF) finalizado. Prefixo: ", output_prefix)
+  return(enrich_results)
+}
 
 
 
+
+up_down_enrich_dds_BALB_c <- run_deseq_up_down_enrichment(
+  dds             = dds_BALB_c,
+  up_threshold    = 1,
+  down_threshold  = -1,
+  padj_cutoff     = 0.05,
+  ontologies      = c("BP","MF"),
+  pAdjustMethod   = "BH",
+  pvalueCutoff    = 0.05,
+  qvalueCutoff    = 0.2,
+  output_prefix   = "./Deseq2/PRJNA552352 - Leishmania/results/DESeq2_UpDown_Control_Non-infected_vs_LPS"
+)
+
+up_down_enrich_dds_C57BL_6 <- run_deseq_up_down_enrichment(
+  dds             = dds_C57BL_6,
+  up_threshold    = 1,
+  down_threshold  = -1,
+  padj_cutoff     = 0.05,
+  ontologies      = c("BP","MF"),
+  pAdjustMethod   = "BH",
+  pvalueCutoff    = 0.05,
+  qvalueCutoff    = 0.2,
+  output_prefix   = "./Deseq2/PRJNA552352 - Leishmania/results/DESeq2_UpDown_Control_Non-infected_vs_Linf_Infected"
+)
 
 #################
+dds_BALB_c 
+up_down_enrich_dds_BALB_c
 
+dds_C57BL_6 
+up_down_enrich_dds_C57BL_6
 
-run_deseq_up_down_analysis <- function(dds, up_threshold, down_threshold, padj_cutoff, output_file) {
-  library(AnnotationDbi)
+# Listas de resultados de enriquecimento
+resultados <- list(
+  dds_BALB_c = up_down_enrich_dds_BALB_c,
+  dds_C57BL_6 = up_down_enrich_dds_C57BL_6
+)
+
+# Diretórios de saída correspondentes
+diretorios_saida <- list(
+  dds_BALB_c = "./Deseq2/PRJNA552352 - Leishmania/results/Enrichment_Analysis_Control_Non-infected_vs_LPS/",
+  dds_C57BL_6 = "./Deseq2/PRJNA552352 - Leishmania/results/Enrichment_Analysis_Control_Non-infected_vs_Linf_Infected/"
   
-  # Executa a análise diferencial
-  res <- results(dds)
-  
-  # Filtra genes upregulados
-  up_genes <- subset(res, log2FoldChange > up_threshold & padj < padj_cutoff)
-  up_genes <- up_genes[!is.na(up_genes$padj), ]
-  
-  # Filtra genes downregulados
-  down_genes <- subset(res, log2FoldChange < down_threshold & padj < padj_cutoff)
-  down_genes <- down_genes[!is.na(down_genes$padj), ]
-  
-  # Converte rownames (genes) para uma coluna separada
-  up_genes$Entrez_ID <- rownames(up_genes)
-  down_genes$Entrez_ID <- rownames(down_genes)
-  
-  # Seleciona o banco de dados correto com base nos IDs Entrez
-  orgDb <- select_orgDb(up_genes$Entrez_ID)
-  
-  # Converte Entrez ID para Symbol
-  up_gene_symbols <- mapIds(orgDb, keys = up_genes$Entrez_ID,
-                            column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
-  down_gene_symbols <- mapIds(orgDb, keys = down_genes$Entrez_ID,
-                              column = "SYMBOL", keytype = "ENTREZID", multiVals = "first")
-  
-  # Adiciona os símbolos aos data frames
-  up_genes$Gene_Symbol <- up_gene_symbols
-  down_genes$Gene_Symbol <- down_gene_symbols
-  
-  # Salva os resultados em Excel
-  wb <- createWorkbook()
-  addWorksheet(wb, "Upregulated")
-  addWorksheet(wb, "Downregulated")
-  writeData(wb, "Upregulated", up_genes)
-  writeData(wb, "Downregulated", down_genes)
-  saveWorkbook(wb, output_file, overwrite = TRUE)
-  
-  return(list(up = up_genes, down = down_genes))
+)
+
+# Alvos de interesse
+targets <- c(
+  "NAT10","HAT1","KAT2A","KAT2B","KAT5","KAT6A","KAT6B",
+  "KAT7","KAT8","KAT12","GTF3C4","CREBBP","aTAT1","p300",
+  "HDAC1","HDAC2","HDAC3","HDAC4","HDAC5","HDAC6","HDAC7",
+  "HDAC8","HDAC9","HDAC10","SIRT1","SIRT2","SIRT3","SIRT4",
+  "SIRT5","SIRT6","SIRT7"
+)
+
+# Palavras-chave para filtragem
+keywords <- c(
+  "acetyltransferase","acetylation","desacetylation",
+  "histone lysine","histone","methyltransferase",
+  "deacetylase","histone deacetylase",
+  "lysine acetyltransferase","lysine"
+)
+
+# Padrões regex para filtragem
+pat_genes <- paste0("\\b(", paste(targets, collapse = "|"), ")\\b")
+pat_keywords <- paste(keywords, collapse = "|")
+targets_up <- toupper(targets)
+
+library(dplyr)
+library(stringr)
+library(purrr)
+library(openxlsx)
+
+# Extrai apenas os genes-alvo de um geneID “A/B/C…”
+extract_targets <- function(geneID) {
+  parts <- str_split(geneID, "/", simplify = TRUE)
+  found <- parts[toupper(parts) %in% targets_up]
+  if (length(found) == 0) NA_character_ else paste(found, collapse = "/")
 }
 
-up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_C57BL_6,
-                                                       up_threshold = 1,
-                                                       down_threshold = -1,
-                                                       padj_cutoff = 0.05,
-                                                       ont = "BP",
-                                                       pAdjustMethod = "BH",
-                                                       pvalueCutoff = 0.05,
-                                                       qvalueCutoff = 0.2,
-                                                       output_file_prefix = file.path(results_dir, "DESeq2_UpDown__dds_Control_Non-infected_vs_Linf_Infected"))
+# Reordena geneID colocando os alvos na frente
+reorder_genes <- function(geneID) {
+  parts <- str_split(geneID, "/", simplify = TRUE)
+  tgt <- parts[toupper(parts) %in% targets_up]
+  other <- parts[!toupper(parts) %in% targets_up]
+  paste(c(tgt, other), collapse = "/")
+}
 
-up_down_enrich_results <- run_deseq_up_down_enrichment(dds = dds_BALB_c,
-                                                       up_threshold = 1,
-                                                       down_threshold = -1,
-                                                       padj_cutoff = 0.05,
-                                                       ont = "BP",
-                                                       pAdjustMethod = "BH",
-                                                       pvalueCutoff = 0.05,
-                                                       qvalueCutoff = 0.2,
-                                                       output_file_prefix = file.path(results_dir, "DESeq2_Control_Non-infected_vs_LPS"))
+# Filtra e anexa colunas comuns
+filter_and_augment <- function(results_list, pattern, on_desc = TRUE) {
+  map_dfr(names(results_list), function(cat) {
+    df <- as.data.frame(results_list[[cat]])
+    df$original_row <- seq_len(nrow(df))
+    df %>%
+      mutate(category = cat) %>%
+      filter(
+        if (on_desc) str_detect(Description, regex(pattern, ignore_case = TRUE))
+        else         str_detect(geneID, regex(pattern, ignore_case = TRUE))
+      ) %>%
+      mutate(
+        only_targets = vapply(geneID, extract_targets, FUN.VALUE = character(1)),
+        geneID_reorder = vapply(geneID, reorder_genes, FUN.VALUE = character(1))
+      )
+  })
+}
 
+# Escreve abas de um data.frame dividido por “category”
+write_by_category <- function(df, path) {
+  wb <- createWorkbook()
+  df %>% split(.$category) %>%
+    iwalk(~{
+      addWorksheet(wb, .y)
+      writeData(wb, .y, .x)
+    })
+  saveWorkbook(wb, path, overwrite = TRUE)
+}
+
+# Itera sobre cada conjunto de resultados
+walk(names(resultados), function(nome) {
+  resultado <- resultados[[nome]]
+  out_dir <- diretorios_saida[[nome]]
+  
+  # Cria o diretório de saída, se não existir
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+  
+  # Define os caminhos dos arquivos de saída
+  terms_file <- file.path(out_dir, "enrichment_terms.xlsx")
+  targets_file <- file.path(out_dir, "enrichment_targets.xlsx")
+  combined_file <- file.path(out_dir, "enrichment_combined.xlsx")
+  
+  # (A) Enriquecimento apenas por termos
+  df_terms <- filter_and_augment(resultado, pat_keywords, TRUE)
+  write_by_category(df_terms, terms_file)
+  
+  # (B) Enriquecimento apenas por genes-alvo
+  df_targets <- filter_and_augment(resultado, pat_genes, FALSE)
+  write_by_category(df_targets, targets_file)
+  
+  # (C) União (termos ∪ targets), sem duplicar entradas por category+ID
+  df_combined <- bind_rows(df_terms, df_targets) %>%
+    distinct(category, ID, .keep_all = TRUE)
+  write_by_category(df_combined, combined_file)
+})
 
 
 

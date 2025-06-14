@@ -1,0 +1,61 @@
+"arquivo","aba","targets_encontrados","keywords_encontradas"
+"./Deseq2/PRJNA656921 - Leishmania/results/DESeq2_UpDown_dds_BALB_c_Enrichment_GO.xlsx","Up_BP",5,0
+"./Deseq2/PRJNA656921 - Leishmania/results/DESeq2_UpDown_dds_BALB_c_Enrichment_GO.xlsx","Down_BP",0,0
+"./Deseq2/PRJNA656921 - Leishmania/results/DESeq2_UpDown_dds_BALB_c_Enrichment_GO.xlsx","Up_MF",0,0
+"./Deseq2/PRJNA656921 - Leishmania/results/DESeq2_UpDown_dds_BALB_c_Enrichment_GO.xlsx","Down_MF",0,0
+"./Deseq2/PRJNA656921 - Leishmania/results/DESeq2_UpDown_dds_C57BL_6_Enrichment_GO.xlsx","Up_BP",41,0
+"./Deseq2/PRJNA656921 - Leishmania/results/DESeq2_UpDown_dds_C57BL_6_Enrichment_GO.xlsx","Down_BP",0,0
+"./Deseq2/PRJNA656921 - Leishmania/results/DESeq2_UpDown_dds_C57BL_6_Enrichment_GO.xlsx","Up_MF",1,0
+"./Deseq2/PRJNA656921 - Leishmania/results/DESeq2_UpDown_dds_C57BL_6_Enrichment_GO.xlsx","Down_MF",0,0
+"./Deseq2/PRJNA707548 - M tuberculosis/results/DESeq2_UpDown_2w_Enrichment_GO.xlsx","Up_BP",0,0
+"./Deseq2/PRJNA707548 - M tuberculosis/results/DESeq2_UpDown_2w_Enrichment_GO.xlsx","Down_BP",0,0
+"./Deseq2/PRJNA707548 - M tuberculosis/results/DESeq2_UpDown_2w_Enrichment_GO.xlsx","Up_MF",0,5
+"./Deseq2/PRJNA707548 - M tuberculosis/results/DESeq2_UpDown_2w_Enrichment_GO.xlsx","Down_MF",0,15
+"./Deseq2/PRJNA707548 - M tuberculosis/results/DESeq2_UpDown_8w_Enrichment_GO.xlsx","Up_BP",0,0
+"./Deseq2/PRJNA707548 - M tuberculosis/results/DESeq2_UpDown_8w_Enrichment_GO.xlsx","Down_BP",0,0
+"./Deseq2/PRJNA707548 - M tuberculosis/results/DESeq2_UpDown_8w_Enrichment_GO.xlsx","Up_MF",0,0
+"./Deseq2/PRJNA707548 - M tuberculosis/results/DESeq2_UpDown_8w_Enrichment_GO.xlsx","Down_MF",0,2
+"./Deseq2/PRJNA838552 - Leishmania/results/DESeq2_UpDown_dds_result_24_Enrichment_GO.xlsx","Up_BP",145,0
+"./Deseq2/PRJNA838552 - Leishmania/results/DESeq2_UpDown_dds_result_24_Enrichment_GO.xlsx","Down_BP",25,0
+"./Deseq2/PRJNA838552 - Leishmania/results/DESeq2_UpDown_dds_result_24_Enrichment_GO.xlsx","Up_MF",12,0
+"./Deseq2/PRJNA838552 - Leishmania/results/DESeq2_UpDown_dds_result_24_Enrichment_GO.xlsx","Down_MF",0,0
+"./Deseq2/PRJNA838552 - Leishmania/results/DESeq2_UpDown_dds_result_8h_Enrichment_GO.xlsx","Up_BP",565,3
+"./Deseq2/PRJNA838552 - Leishmania/results/DESeq2_UpDown_dds_result_8h_Enrichment_GO.xlsx","Down_BP",144,9
+"./Deseq2/PRJNA838552 - Leishmania/results/DESeq2_UpDown_dds_result_8h_Enrichment_GO.xlsx","Up_MF",29,9
+"./Deseq2/PRJNA838552 - Leishmania/results/DESeq2_UpDown_dds_result_8h_Enrichment_GO.xlsx","Down_MF",59,27
+"./Deseq2/SRP009251 - Leishmania/results/DESeq2_UpDown_Cutaneous_vs_Mucosal_Enrichment_GO.xlsx","Up_BP",0,0
+"./Deseq2/SRP009251 - Leishmania/results/DESeq2_UpDown_Cutaneous_vs_Mucosal_Enrichment_GO.xlsx","Down_BP",0,0
+"./Deseq2/SRP009251 - Leishmania/results/DESeq2_UpDown_Cutaneous_vs_Mucosal_Enrichment_GO.xlsx","Up_MF",NA,NA
+"./Deseq2/SRP009251 - Leishmania/results/DESeq2_UpDown_Cutaneous_vs_Mucosal_Enrichment_GO.xlsx","Down_MF",NA,NA
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Enrichment_GO.xlsx","Up_BP",3,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Enrichment_GO.xlsx","Down_BP",93,10
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Enrichment_GO.xlsx","Up_MF",0,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Enrichment_GO.xlsx","Down_MF",9,12
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Chronic_Inf_Enrichment_GO.xlsx","Up_BP",5,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Chronic_Inf_Enrichment_GO.xlsx","Down_BP",26,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Chronic_Inf_Enrichment_GO.xlsx","Up_MF",2,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Chronic_Inf_Enrichment_GO.xlsx","Down_MF",0,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Early_Inf_Enrichment_GO.xlsx","Up_BP",0,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Early_Inf_Enrichment_GO.xlsx","Down_BP",84,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Early_Inf_Enrichment_GO.xlsx","Up_MF",0,2
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Early_Inf_Enrichment_GO.xlsx","Down_MF",0,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Late_Inf_Enrichment_GO.xlsx","Up_BP",0,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Late_Inf_Enrichment_GO.xlsx","Down_BP",40,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Late_Inf_Enrichment_GO.xlsx","Up_MF",0,0
+"./Deseq2/SRP069976 - Leishmania/results/DESeq2_UpDown_Health_vs_Late_Inf_Enrichment_GO.xlsx","Down_MF",1,0
+"./Deseq2/SRP151491 - M tuberculosis/results/DESeq2_UpDown_Enrichment_GO.xlsx","Up_BP",3,0
+"./Deseq2/SRP151491 - M tuberculosis/results/DESeq2_UpDown_Enrichment_GO.xlsx","Down_BP",93,10
+"./Deseq2/SRP151491 - M tuberculosis/results/DESeq2_UpDown_Enrichment_GO.xlsx","Up_MF",0,0
+"./Deseq2/SRP151491 - M tuberculosis/results/DESeq2_UpDown_Enrichment_GO.xlsx","Down_MF",9,12
+"./Deseq2/SRP185421 - M tuberculosis/results/DESeq2_UpDown_Enrichment_GO.xlsx","Up_BP",0,0
+"./Deseq2/SRP185421 - M tuberculosis/results/DESeq2_UpDown_Enrichment_GO.xlsx","Down_BP",45,0
+"./Deseq2/SRP185421 - M tuberculosis/results/DESeq2_UpDown_Enrichment_GO.xlsx","Up_MF",0,0
+"./Deseq2/SRP185421 - M tuberculosis/results/DESeq2_UpDown_Enrichment_GO.xlsx","Down_MF",4,3
+"./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown_dds_nf_ifp_Enrichment_GO.xlsx","Up_BP",0,0
+"./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown_dds_nf_ifp_Enrichment_GO.xlsx","Down_BP",2,0
+"./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown_dds_nf_ifp_Enrichment_GO.xlsx","Up_MF",0,0
+"./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown_dds_nf_ifp_Enrichment_GO.xlsx","Down_MF",0,0
+"./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown_dds_nf_ilp_Enrichment_GO.xlsx","Up_BP",0,0
+"./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown_dds_nf_ilp_Enrichment_GO.xlsx","Down_BP",29,0
+"./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown_dds_nf_ilp_Enrichment_GO.xlsx","Up_MF",0,0
+"./Deseq2/SRP377060 - Leishmania/results/DESeq2_UpDown_dds_nf_ilp_Enrichment_GO.xlsx","Down_MF",2,1

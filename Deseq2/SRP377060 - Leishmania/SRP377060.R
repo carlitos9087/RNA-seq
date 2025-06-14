@@ -523,64 +523,6 @@ detect_organism <- function(entrez_ids) {
   }
 }
 
-# # Define o arquivo de entrada (o Excel com as abas de Venn)
-# input_file <- "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis_VennData.xlsx"
-# 
-# # Obter os nomes das abas no arquivo Excel
-# sheet_names <- getSheetNames(input_file)
-# 
-# # Loop por cada aba para realizar enriquecimento
-# for(sheet in sheet_names) {
-#   # Ler a aba
-#   gene_df <- read.xlsx(input_file, sheet = sheet)
-#   
-#   # Verifica se a coluna "Entrez_ID" existe
-#   if(!("Entrez_ID" %in% colnames(gene_df))) {
-#     stop("A coluna 'Entrez_ID' não foi encontrada na aba ", sheet)
-#   }
-#   
-#   # Pega a lista de IDs, removendo NAs ou strings vazias
-#   gene_list <- as.character(gene_df$Entrez_ID)
-#   gene_list <- gene_list[!is.na(gene_list) & gene_list != ""]
-#   
-#   # Detecta o organismo usando a função detect_organism
-#   organism <- tryCatch(detect_organism(gene_list), error = function(e) NA)
-#   if(is.na(organism)) {
-#     message("Nenhum organismo reconhecido para a aba ", sheet, ". Pulando enriquecimento.")
-#     next
-#   }
-#   
-#   # Seleciona o OrgDb com base no organismo detectado
-#   orgDb <- if(organism == "Homo sapiens") org.Hs.eg.db else org.Mm.eg.db
-#   
-#   # Executa enriquecimento GO para Biological Process (BP)
-#   ego <- enrichGO(gene         = gene_list,
-#                   OrgDb        = orgDb,
-#                   keyType      = "ENTREZID",
-#                   ont          = c("BP","MF"),
-#                   pAdjustMethod = "BH",
-#                   pvalueCutoff  = 0.05,
-#                   qvalueCutoff  = 0.2,
-#                   readable     = TRUE)
-#   
-#   # Se não houver genes mapeados, pula a aba
-#   if(is.null(ego) || nrow(as.data.frame(ego)) == 0) {
-#     message("Nenhum gene mapeado para enriquecimento na aba ", sheet, ". Pulando.")
-#     next
-#   }
-#   
-#   # Salva a tabela de enriquecimento em um arquivo Excel
-#   output_excel <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".xlsx")
-#   write.xlsx(as.data.frame(ego), file = output_excel, overwrite = TRUE)
-#   
-#   # Gera e salva um dotplot (como PDF) para visualização
-#   output_pdf <- paste0("./Deseq2/SRP377060 - Leishmania/results/Enrichment_", sheet, ".pdf")
-#   pdf(output_pdf, width = 10, height = 8)
-#   print(dotplot(ego, showCategory = 20) + ggtitle(paste("GO Enrichment for", sheet)))
-#   dev.off()
-#   
-#   message("Enrichment analysis for sheet '", sheet, "' completed!")
-# }
 
 
 input_file <- "./Deseq2/SRP377060 - Leishmania/results/Venn_Analysis_VennData.xlsx"
