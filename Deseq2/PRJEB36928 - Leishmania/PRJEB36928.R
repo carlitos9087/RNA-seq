@@ -2,7 +2,6 @@
 # Define o diretório de trabalho
 setwd("/Users/carlitos/Desktop/RNA-seq/")
 
-# Carregando os pacotes necessários
 library(dplyr)
 library(ggrepel)
 library(biomaRt)
